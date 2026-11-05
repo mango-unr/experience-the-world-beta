@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Experience the World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Lexend:wght@400;500&display=swap">
+<style>
+/* Pannellum 2.5.6, https://github.com/mpetroff/pannellum */
+.pnlm-container{margin:0;padding:0;overflow:hidden;position:relative;cursor:default;width:100%;height:100%;font-family:Helvetica,"Nimbus Sans L","Liberation Sans",Arial,sans-serif;background:#f4f4f4 url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2267%22%20height%3D%22100%22%20viewBox%3D%220%200%2067%20100%22%3E%0A%3Cpath%20stroke%3D%22%23ccc%22%20fill%3D%22none%22%20d%3D%22M33.5%2C50%2C0%2C63%2C33.5%2C75%2C67%2C63%2C33.5%2C50m-33.5-50%2C67%2C25m-0.5%2C0%2C0%2C75m-66.5-75%2C67-25m-33.5%2C75%2C0%2C25m0-100%2C0%2C50%22%2F%3E%0A%3C%2Fsvg%3E%0A') repeat;-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:none;-o-user-select:none;-ms-user-select:none;user-select:none;outline:0;line-height:1.4;contain:content}.pnlm-container *{box-sizing:content-box}.pnlm-ui{position:absolute;width:100%;height:100%;z-index:1}.pnlm-grab{cursor:grab;cursor:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20height%3D%2226%22%20width%3D%2226%22%3E%0A%3Cpath%20stroke%3D%22%23000%22%20stroke-width%3D%221px%22%20fill%3D%22%23fff%22%20d%3D%22m15.3%2020.5s6.38-6.73%204.64-8.24-3.47%201.01-3.47%201.01%203.61-5.72%201.41-6.49c-2.2-0.769-3.33%204.36-3.33%204.36s0.873-5.76-1.06-5.76-1.58%205.39-1.58%205.39-0.574-4.59-2.18-4.12c-1.61%200.468-0.572%205.51-0.572%205.51s-1.58-4.89-2.93-3.79c-1.35%201.11%200.258%205.25%200.572%206.62%200.836%202.43%202.03%202.94%202.17%205.55%22%2F%3E%0A%3C%2Fsvg%3E%0A') 12 8,default}.pnlm-grabbing{cursor:grabbing;cursor:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20height%3D%2226%22%20width%3D%2226%22%3E%0A%3Cpath%20stroke%3D%22%23000%22%20stroke-width%3D%221px%22%20fill%3D%22%23fff%22%20d%3D%22m15.3%2020.5s5.07-5.29%203.77-6.74c-1.31-1.45-2.53%200.14-2.53%200.14s2.74-3.29%200.535-4.06c-2.2-0.769-2.52%201.3-2.52%201.3s0.81-2.13-1.12-2.13-1.52%201.77-1.52%201.77-0.261-1.59-1.87-1.12c-1.61%200.468-0.874%202.17-0.874%202.17s-0.651-1.55-2-0.445c-1.35%201.11-0.68%202.25-0.365%203.62%200.836%202.43%202.03%202.94%202.17%205.55%22%2F%3E%0A%3C%2Fsvg%3E%0A') 12 8,default}.pnlm-sprite{background-image:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2226%22%20height%3D%22208%22%3E%0A%3Ccircle%20fill-opacity%3D%22.78%22%20cy%3D%22117%22%20cx%3D%2213%22%20r%3D%2211%22%20fill%3D%22%23fff%22%2F%3E%0A%3Ccircle%20fill-opacity%3D%22.78%22%20cy%3D%22143%22%20cx%3D%2213%22%20r%3D%2211%22%20fill%3D%22%23fff%22%2F%3E%0A%3Ccircle%20cy%3D%22169%22%20cx%3D%2213%22%20r%3D%227%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%2F%3E%0A%3Ccircle%20cy%3D%22195%22%20cx%3D%2213%22%20r%3D%227%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%2F%3E%0A%3Ccircle%20cx%3D%2213%22%20cy%3D%22195%22%20r%3D%222.5%22%2F%3E%0A%3Cpath%20d%3D%22m5%2083v6h2v-4h4v-2zm10%200v2h4v4h2v-6zm-5%205v6h6v-6zm-5%205v6h6v-2h-4v-4zm14%200v4h-4v2h6v-6z%22%2F%3E%0A%3Cpath%20d%3D%22m13%20110a7%207%200%200%200%20-7%207%207%207%200%200%200%207%207%207%207%200%200%200%207%20-7%207%207%200%200%200%20-7%20-7zm-1%203h2v2h-2zm0%203h2v5h-2z%22%2F%3E%0A%3Cpath%20d%3D%22m5%2057v6h2v-4h4v-2zm10%200v2h4v4h2v-6zm-10%2010v6h6v-2h-4v-4zm14%200v4h-4v2h6v-6z%22%2F%3E%0A%3Cpath%20d%3D%22m17%2038v2h-8v-2z%22%2F%3E%0A%3Cpath%20d%3D%22m12%209v3h-3v2h3v3h2v-3h3v-2h-3v-3z%22%2F%3E%0A%3Cpath%20d%3D%22m13%20136-6.125%206.125h4.375v7.875h3.5v-7.875h4.375z%22%2F%3E%0A%3Cpath%20d%3D%22m10.428%20173.33v-5.77l5-2.89v5.77zm1-1.73%203-1.73-3.001-1.74z%22%2F%3E%0A%3C%2Fsvg%3E%0A')}.pnlm-container:-moz-full-screen{height:100%!important;width:100%!important;position:static!important}.pnlm-container:-webkit-full-screen{height:100%!important;width:100%!important;position:static!important}.pnlm-container:-ms-fullscreen{height:100%!important;width:100%!important;position:static!important}.pnlm-container:fullscreen{height:100%!important;width:100%!important;position:static!important}.pnlm-render-container{cursor:inherit;position:absolute;height:100%;width:100%}.pnlm-controls{margin-top:4px;background-color:#fff;border:1px solid #999;border-color:rgba(0,0,0,0.4);border-radius:3px;cursor:pointer;z-index:2;-webkit-transform:translateZ(9999px);transform:translateZ(9999px)}.pnlm-control:hover{background-color:#f8f8f8}.pnlm-controls-container{position:absolute;top:0;left:4px;z-index:1}.pnlm-zoom-controls{width:26px;height:52px}.pnlm-zoom-in{width:100%;height:50%;position:absolute;top:0;border-radius:3px 3px 0 0}.pnlm-zoom-out{width:100%;height:50%;position:absolute;bottom:0;background-position:0 -26px;border-top:1px solid #ddd;border-top-color:rgba(0,0,0,0.10);border-radius:0 0 3px 3px}.pnlm-fullscreen-toggle-button,.pnlm-orientation-button,.pnlm-hot-spot-debug-indicator{width:26px;height:26px}.pnlm-hot-spot-debug-indicator{position:absolute;top:50%;left:50%;width:26px;height:26px;margin:-13px 0 0 -13px;background-color:rgba(255,255,255,0.5);border-radius:13px;display:none}.pnlm-orientation-button-inactive{background-position:0 -156px}.pnlm-orientation-button-active{background-position:0 -182px}.pnlm-fullscreen-toggle-button-inactive{background-position:0 -52px}.pnlm-fullscreen-toggle-button-active{background-position:0 -78px}.pnlm-panorama-info{position:absolute;bottom:4px;background-color:rgba(0,0,0,0.7);border-radius:0 3px 3px 0;padding-right:10px;color:#fff;text-align:left;display:none;z-index:2;-webkit-transform:translateZ(9999px);transform:translateZ(9999px)}.pnlm-title-box{position:relative;font-size:20px;display:table;padding-left:5px;margin-bottom:3px}.pnlm-author-box{position:relative;font-size:12px;display:table;padding-left:5px}.pnlm-load-box{position:absolute;top:50%;left:50%;width:200px;height:150px;margin:-75px 0 0 -100px;background-color:rgba(0,0,0,0.7);border-radius:3px;text-align:center;font-size:20px;display:none;color:#fff}.pnlm-load-box p{margin:20px 0}.pnlm-lbox{position:absolute;top:50%;left:50%;width:20px;height:20px;margin:-10px 0 0 -10px;display:none}.pnlm-loading{animation-duration:1.5s;-webkit-animation-duration:1.5s;animation-name:pnlm-mv;-webkit-animation-name:pnlm-mv;animation-iteration-count:infinite;-webkit-animation-iteration-count:infinite;animation-timing-function:linear;-webkit-animation-timing-function:linear;height:10px;width:10px;background-color:#fff;position:relative}@keyframes pnlm-mv{from{left:0;top:0}25%{left:10px;top:0}50%{left:10px;top:10px}75%{left:0;top:10px}to{left:0;top:0}}@-webkit-keyframes pnlm-mv{from{left:0;top:0}25%{left:10px;top:0}50%{left:10px;top:10px}75%{left:0;top:10px}to{left:0;top:0}}.pnlm-load-button{position:absolute;top:50%;left:50%;width:200px;height:100px;margin:-50px 0 0 -100px;background-color:rgba(0,0,0,.7);border-radius:3px;text-align:center;font-size:20px;display:table;color:#fff;cursor:pointer}.pnlm-load-button:hover{background-color:rgba(0,0,0,.8)}.pnlm-load-button p{display:table-cell;vertical-align:middle}.pnlm-info-box{font-size:15px;position:absolute;top:50%;left:50%;width:200px;height:150px;margin:-75px 0 0 -100px;background-color:#000;border-radius:3px;display:table;text-align:center;color:#fff;table-layout:fixed}.pnlm-info-box a,.pnlm-author-box a{color:#fff;word-wrap:break-word;overflow-wrap:break-word}.pnlm-info-box p{display:table-cell;vertical-align:middle;padding:0 5px 0 5px}.pnlm-error-msg{display:none}.pnlm-about-msg{font-size:11px;line-height:11px;color:#fff;padding:5px 8px 5px 8px;background:rgba(0,0,0,0.7);border-radius:3px;position:absolute;top:50px;left:50px;display:none;opacity:0;-moz-transition:opacity .3s ease-in-out;-webkit-transition:opacity .3s ease-in-out;-o-transition:opacity .3s ease-in-out;-ms-transition:opacity .3s ease-in-out;transition:opacity .3s ease-in-out;z-index:1}.pnlm-about-msg a:link,.pnlm-about-msg a:visited{color:#fff}.pnlm-about-msg a:hover,.pnlm-about-msg a:active{color:#eee}.pnlm-hotspot-base{position:absolute;visibility:hidden;cursor:default;vertical-align:middle;top:0;z-index:1}.pnlm-hotspot{height:26px;width:26px;border-radius:13px}.pnlm-hotspot:hover{background-color:rgba(255,255,255,0.2)}.pnlm-hotspot.pnlm-info{background-position:0 -104px}.pnlm-hotspot.pnlm-scene{background-position:0 -130px}div.pnlm-tooltip span{visibility:hidden;position:absolute;border-radius:3px;background-color:rgba(0,0,0,0.7);color:#fff;text-align:center;max-width:200px;padding:5px 10px;margin-left:-220px;cursor:default}div.pnlm-tooltip:hover span{visibility:visible}div.pnlm-tooltip:hover span:after{content:'';position:absolute;width:0;height:0;border-width:10px;border-style:solid;border-color:rgba(0,0,0,0.7) transparent transparent transparent;bottom:-20px;left:-10px;margin:0 50%}.pnlm-compass{position:absolute;width:50px;height:50px;right:4px;bottom:4px;border-radius:25px;background-image:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20height%3D%2250%22%20width%3D%2250%22%3E%0A%3Cpath%20d%3D%22m24.5078%206-3.2578%2018h7.5l-3.25781-18h-0.984376zm-3.2578%2020%203.2578%2018h0.9844l3.2578-18h-7.5zm1.19531%200.9941h5.10938l-2.5547%2014.1075-2.5547-14.1075z%22%2F%3E%0A%3C%2Fsvg%3E%0A');cursor:default;display:none}.pnlm-world{position:absolute;left:50%;top:50%}.pnlm-face{position:absolute;-webkit-transform-origin:0 0;transform-origin:0 0}.pnlm-dragfix,.pnlm-preview-img{position:absolute;height:100%;width:100%}.pnlm-preview-img{background-size:cover;background-position:center}.pnlm-lbar{width:150px;margin:0 auto;border:#fff 1px solid;height:6px}.pnlm-lbar-fill{background:#fff;height:100%;width:0}.pnlm-lmsg{font-size:12px}.pnlm-fade-img{position:absolute;top:0;left:0}.pnlm-pointer{cursor:pointer}
+/* Layout: the 360 photo fills the whole screen; buttons and the hotspot panel float on top of it. */
+:root{--bg:#ffffff;--surface:#ffffff;--soft-bg:#eef3f2;--fg:#1f3433;--muted:#5a706e;--line:#cfdcda;--btn:#2f7d74;--btn-fg:#ffffff;--marker:#ffffff;
+  --display:"Fredoka","Trebuchet MS",system-ui,sans-serif;--body:"Lexend","Segoe UI",system-ui,sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#1d2e2d;--surface:#1d2e2d;--soft-bg:#142120;--fg:#e3eeec;--muted:#9db3b0;--line:#2f4644;--btn:#5fb3a8;--btn-fg:#0e1c1b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1d2e2d;--surface:#1d2e2d;--soft-bg:#142120;--fg:#e3eeec;--muted:#9db3b0;--line:#2f4644;--btn:#5fb3a8;--btn-fg:#0e1c1b;color-scheme:dark}
+html,body{height:100%;overflow:hidden}
+:root{padding:0!important}
+body{background:#000;color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.5}
+#pano{position:fixed;inset:0}
+.top{position:fixed;left:0;right:0;top:0;z-index:5;pointer-events:none;
+  padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.top>*{pointer-events:auto}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.top .note{color:#fff;font-size:1rem;margin-top:8px;text-shadow:0 1px 3px rgba(0,0,0,.8);pointer-events:none}
+.top button{background:var(--surface);color:var(--fg);border-color:var(--line)}
+.top button[aria-pressed="true"]{background:var(--btn);color:var(--btn-fg);border-color:var(--btn)}
+button,.filebtn{font-family:var(--display);font-weight:600;font-size:1.05rem;cursor:pointer;border-radius:14px;padding:12px 18px;border:2px solid var(--line);background:transparent;color:var(--fg);min-height:52px;box-sizing:border-box;display:inline-flex;align-items:center}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+.filebtn:focus-within{outline:3px solid #e9a23b;outline-offset:2px}
+button.primary{background:var(--btn);color:var(--btn-fg);border-color:var(--btn)}
+button[aria-pressed="true"]{background:var(--btn);color:var(--btn-fg);border-color:var(--btn)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #e9a23b;outline-offset:2px}
+.hs{width:44px;height:44px;border-radius:50%;background:transparent;border:4px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.6),inset 0 0 4px rgba(0,0,0,.6);cursor:pointer;box-sizing:border-box}
+.panel{position:fixed;z-index:6;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));
+  bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:640px;margin:0 auto;max-height:70%;overflow:auto;
+  background:var(--surface);border:2px solid var(--line);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.panel h2{margin:0;font-family:var(--display);font-weight:600;font-size:1.5rem}
+.panel p{margin:0;font-size:1.2rem;line-height:1.6;max-width:60ch}
+label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--muted)}
+label.filebtn{display:inline-flex;flex-direction:row;color:var(--fg);font-size:1.05rem;position:relative}
+input[type=text],textarea{font:inherit;color:var(--fg);background:var(--soft-bg);border:2px solid var(--line);border-radius:12px;padding:10px 12px}
+textarea{min-height:70px;resize:vertical}
+.state{font-size:.85rem;color:var(--muted)}
+.panel.list{max-height:85%}
+.line{border-top:2px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:8px}
+.line h3{margin:0;font-family:var(--display);font-weight:600;font-size:1.2rem}
+.line p{font-size:1.05rem}
+.tag{font-family:var(--display);font-weight:600;background:#e9a23b;color:#3a2604;border-radius:10px;padding:6px 12px}
+</style>
+</head>
+<body>
+
+<div id="pano"></div>
+<div class="top" id="top">
+  <div class="bar">
+    <span class="tag" id="adminTag" hidden>Admin</span>
+    <button type="button" id="muteBtn" aria-pressed="false">Mute</button>
+    <button type="button" id="grownBtn">Grown-ups</button>
+    <button type="button" id="shareBtn" hidden>Share hotspots with Claude</button>
+  </div>
+  <div class="note" id="note">Tap a white ring to find out about it.</div>
+</div>
+<div class="panel" id="panel" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS='costcoHotspots.v1';
+let spots=[];try{spots=JSON.parse(localStorage.getItem(LS))||[]}catch(e){}
+const save=()=>{try{localStorage.setItem(LS,JSON.stringify(spots))}catch(e){}};
+// Built-in hotspots, as made by the admin (shown on any phone that hasn't saved its own changes)
+const BUILT_IN=[
+ {"id":"example","title":"The tills","text":"These are the tills. They go beep when the food is scanned. There are queues of people here waiting to order their food.","yaw":-22,"pitch":-2},
+ {"id":"smw3m9joi","title":"Menu Board","text":"This is the menu Board. It has images of the food being sold and the prices so that people can decide what to eat. Max likes looking at menu boards and memorizing prices","yaw":8,"pitch":9.4},
+ {"id":"smw3madit","title":"Crowds","text":"There is a crowd of people eating their meal at the food court. Sometimes the crowds make Max anxious because of all the multiple conversations he can hear. He likes to wear his headphones when this happens. But he also enjoys observing people.","yaw":49.4,"pitch":-5}
+];
+if(!spots.length){spots=JSON.parse(JSON.stringify(BUILT_IN));save()}
+
+// audio files live in this browser (IndexedDB)
+let db=null;
+const openDb=()=>new Promise(r=>{try{const q=indexedDB.open('costcoAudio',1);q.onupgradeneeded=()=>q.result.createObjectStore('a');q.onsuccess=()=>{db=q.result;r()};q.onerror=()=>r()}catch(e){r()}});
+const get=k=>new Promise(r=>{if(!db)return r(null);try{const q=db.transaction('a').objectStore('a').get(k);q.onsuccess=()=>r(q.result||null);q.onerror=()=>r(null)}catch(e){r(null)}});
+const put=(k,v)=>new Promise(r=>{if(!db)return r(false);try{const t=db.transaction('a','readwrite');t.objectStore('a').put(v,k);t.oncomplete=()=>r(true);t.onerror=()=>r(false)}catch(e){r(false)}});
+const del=k=>new Promise(r=>{if(!db)return r();try{const t=db.transaction('a','readwrite');t.objectStore('a').delete(k);t.oncomplete=()=>r();t.onerror=()=>r()}catch(e){r()}});
+
+let muted=false,player=null,limit=0;
+const SOUND_LIMIT=10; // seconds: sounds stop after this; the parent's voice plays in full
+const FADE=2; // seconds of fade-out before the limit
+const toUrl=b=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=()=>r(null);fr.readAsDataURL(b)});
+function stop(){if(player){player.pause();player=null}syncCtl()}
+function syncCtl(){const c=$('ctl');if(!c)return;c.hidden=!player;const pp=$('cPlay');if(pp&&player)pp.textContent=player.paused?'Play':'Pause'}
+async function play(key){stop();const b=await get(key);if(!b)return;const url=await toUrl(b);if(!url)return;
+  const a=new Audio(url);player=a;a.muted=muted;limit=key.startsWith('sound:')?SOUND_LIMIT:0;
+  a.addEventListener('timeupdate',()=>{if(limit&&a.currentTime>=limit){a.pause();syncCtl()}});
+  const fade=()=>{if(player!==a)return;if(limit){const left=limit-a.currentTime;a.volume=Math.max(0,Math.min(1,left/FADE));if(left<=0&&!a.paused){a.pause()}}if(!a.paused)requestAnimationFrame(fade)};
+  a.addEventListener('play',()=>requestAnimationFrame(fade));
+  a.addEventListener('ended',syncCtl);a.addEventListener('pause',syncCtl);a.addEventListener('play',syncCtl);
+  a.play().catch(()=>{});syncCtl()}
+function togglePlay(){if(!player)return;if(player.paused){if(limit&&player.currentTime>=limit)player.currentTime=0;if(player.ended)player.currentTime=0;player.play().catch(()=>{})}else player.pause()}
+function replay(){if(!player)return;player.currentTime=0;player.play().catch(()=>{})}
+$('muteBtn').onclick=()=>{muted=!muted;$('muteBtn').setAttribute('aria-pressed',muted);$('muteBtn').textContent=muted?'Unmute':'Mute';if(player)player.muted=muted};
+
+// Modes: child (default), parent (via Grown-ups button), admin (separate link ending #admin)
+const editing=location.hash==='#admin';
+window.addEventListener('hashchange',()=>location.reload());
+if(editing){$('adminTag').hidden=false;$('shareBtn').hidden=false;$('grownBtn').hidden=true;
+  $('note').textContent='Tap anywhere on the photo to add a hotspot. Tap a ring to change it.'}
+$('shareBtn').onclick=()=>{
+  const txt=JSON.stringify(spots.map(({id,title,text,yaw,pitch})=>({id,title,text,yaw,pitch})),null,1);
+  const show=msg=>{$('panel').innerHTML='<h2>Share hotspots with Claude</h2><p>'+msg+'</p><textarea id="shareBox" readonly style="min-height:160px"></textarea><div class="bar"><button type="button" id="shareClose">Close</button></div>';
+    $('panel').hidden=false;$('shareBox').value=txt;$('shareClose').onclick=closePanel;return $('shareBox')};
+  const fallback=()=>{const b=show('Press and hold the text below, choose Select all, then Copy, and paste it into the chat with Claude.');b.focus();b.select()};
+  try{navigator.clipboard.writeText(txt).then(()=>show('Copied. Paste it into the chat with Claude.'),fallback)}catch(e){fallback()}};
+$('grownBtn').onclick=()=>openParent();
+
+const viewer=pannellum.viewer('pano',{type:'equirectangular',panorama:'costco.jpg',autoLoad:true,showControls:false,hfov:50,minHfov:50,maxHfov:100,
+  hotSpots:spots.map(cfg)});
+function cfg(s){return{id:s.id,yaw:s.yaw,pitch:s.pitch,cssClass:'hs',createTooltipFunc:d=>{d.dataset.spot=s.id;d.setAttribute('aria-label',s.title)}}}
+function redraw(){(viewer.getConfig().hotSpots||[]).map(h=>h.id).forEach(id=>viewer.removeHotSpot(id));spots.forEach(s=>viewer.addHotSpot(cfg(s)))}
+
+// tap detection (works for touch and mouse; ignores drags)
+let down=null;const el=$('pano');
+el.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY}},true);
+el.addEventListener('pointerup',e=>{if(!down)return;const m=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(m>10)return;
+  const hit=e.target.closest&&e.target.closest('[data-spot]');
+  if(hit){const s=spots.find(x=>x.id===hit.dataset.spot);if(s)(editing?editSpot(s):showSpot(s));return}
+  if(editing){const [p,y]=viewer.mouseEventToCoords({clientX:e.clientX,clientY:e.clientY});editSpot(null,{pitch:+p.toFixed(1),yaw:+y.toFixed(1)})}},true);
+
+function closePanel(){if(rec){try{rec.r.stop()}catch(e){}}stop();$('panel').hidden=true;$('panel').classList.remove('list');$('panel').innerHTML='';$('top').hidden=false}
+
+// In-app recording (needs microphone access; the Claude app blocks it, a normal website allows it)
+let rec=null;
+async function toggleRec(i,k,refresh){
+  const btn=$('pr'+i),st=$('ps'+i);
+  if(rec&&rec.i===i){rec.r.stop();return}
+  if(rec){st.textContent='Finish the other recording first';return}
+  stop();
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}
+  catch(e){st.textContent='Recording isn\u2019t available here. It will work once the app is on its own website.';return}
+  const chunks=[];let r;
+  try{r=new MediaRecorder(stream)}catch(e){stream.getTracks().forEach(t=>t.stop());st.textContent='This phone can\u2019t record here.';return}
+  const t0=Date.now();const tick=setInterval(()=>{st.textContent='Recording\u2026 '+Math.floor((Date.now()-t0)/1000)+'s'},250);
+  r.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  r.onstop=async()=>{clearInterval(tick);stream.getTracks().forEach(t=>t.stop());rec=null;btn.textContent='Record again';
+    const blob=new Blob(chunks,{type:r.mimeType||'audio/webm'});
+    const ok=blob.size&&await put(k,blob);if(!ok)st.textContent='Could not save on this phone';else refresh()};
+  rec={i,r};r.start();btn.textContent='Stop';st.textContent='Recording\u2026 0s';
+}
+// Parent mode: a list of every hotspot's words, with the parent's recording for each
+async function openParent(){
+  stop();const p=$('panel');p.classList.add('list');$('top').hidden=true;
+  p.innerHTML='<div class="bar"><h2 style="flex:1">Record your voice</h2><button type="button" id="parentDone">Back to child view</button></div>'+
+    '<p style="font-size:1rem">Tap Record, read the words out loud, then tap Stop. You can play it back and record again.</p>'+
+    spots.map((s,i)=>'<div class="line"><h3>'+esc(s.title)+'</h3><p>'+esc(s.text)+'</p><div class="bar">'+
+      '<button type="button" class="primary" id="pr'+i+'">Record</button>'+
+      '<label class="filebtn" for="pv'+i+'">Add a file<input class="vh" type="file" id="pv'+i+'" accept="audio/*"></label>'+
+      '<button type="button" id="pp'+i+'">Play</button><button type="button" id="px'+i+'">Remove</button><span class="state" id="ps'+i+'"></span></div></div>').join('')+
+    '<div class="bar" id="ctl" hidden><button type="button" id="cPlay">Pause</button><button type="button" id="cReplay">Replay</button></div>';
+  p.hidden=false;$('parentDone').onclick=closePanel;$('cPlay').onclick=togglePlay;$('cReplay').onclick=replay;
+  spots.forEach((s,i)=>{const k='voice:'+s.id;
+    const refresh=async()=>{const has=!!(await get(k));$('ps'+i).textContent=has?'Added':'Not recorded yet';$('pp'+i).disabled=!has;$('px'+i).disabled=!has};refresh();
+    $('pv'+i).addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const ok=await put(k,f);if(!ok)$('ps'+i).textContent='Could not save on this phone';else refresh()});
+    $('pr'+i).onclick=()=>toggleRec(i,k,refresh);
+    $('pp'+i).onclick=()=>play(k);$('px'+i).onclick=async()=>{stop();await del(k);refresh()}});
+}
+
+async function showSpot(s){
+  const hasVoice=!!(await get('voice:'+s.id)),hasSound=!!(await get('sound:'+s.id));
+  $('panel').innerHTML='<h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p><div class="bar">'+
+    '<button type="button" class="primary" id="pVoice"'+(hasVoice?'':' disabled')+'>Parent reads it</button>'+
+    '<button type="button" id="pSound"'+(hasSound?'':' disabled')+'>Hear the sound</button>'+
+    '<button type="button" id="pClose">Close</button></div>'+
+    '<div class="bar" id="ctl" hidden><button type="button" id="cPlay">Pause</button><button type="button" id="cReplay">Replay</button></div>'+
+    ((hasVoice&&hasSound)?'':'<span class="state">'+(!hasVoice?'No parent recording yet. ':'')+(!hasSound?'No sound added yet.':'')+'</span>');
+  $('panel').hidden=false;
+  $('pVoice').onclick=()=>play('voice:'+s.id);$('pSound').onclick=()=>play('sound:'+s.id);$('pClose').onclick=closePanel;$('cPlay').onclick=togglePlay;$('cReplay').onclick=replay;
+}
+
+function editSpot(s,pos){
+  const isNew=!s;s=s||{id:'s'+Date.now().toString(36),title:'',text:'',yaw:pos.yaw,pitch:pos.pitch};
+  $('panel').innerHTML='<h2>'+(isNew?'New hotspot':'Change hotspot')+'</h2>'+
+    '<label for="fTitle">Name<input type="text" id="fTitle" value="'+esc(s.title)+'"></label>'+
+    '<label for="fText">What it says<textarea id="fText">'+esc(s.text)+'</textarea></label>'+
+    '<div class="bar"><label class="filebtn" for="fSoundIn">Add a sound<input class="vh" type="file" id="fSoundIn" accept="audio/*"></label><button type="button" id="fSoundX">Remove</button><span class="state" id="sSound"></span></div>'+
+    '<div class="bar"><button type="button" class="primary" id="fSave">Save</button>'+(isNew?'':'<button type="button" id="fDel">Delete</button>')+'<button type="button" id="fCancel">Cancel</button></div>';
+  $('panel').hidden=false;
+  const vk='voice:'+s.id,sk='sound:'+s.id;
+  const refresh=async()=>{$('sSound').textContent=(await get(sk))?'Added':'None yet'};refresh();
+  const bind=(id,k)=>$(id).addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const ok=await put(k,f);if(!ok)$('sSound').textContent='Could not save on this phone';else refresh()});bind('fSoundIn',sk);
+  $('fSoundX').onclick=async()=>{await del(sk);refresh()};
+  $('fCancel').onclick=()=>{if(isNew)del(sk);closePanel()};
+  $('fSave').onclick=()=>{const t=$('fTitle').value.trim();if(!t){$('fTitle').focus();return}
+    s.title=t;s.text=$('fText').value.trim();if(isNew)spots.push(s);save();redraw();closePanel()};
+  if(!isNew)$('fDel').onclick=()=>{spots=spots.filter(x=>x.id!==s.id);save();del(vk);del(sk);redraw();closePanel()};
+  $('fTitle').focus({preventScroll:true});
+}
+openDb();
+})();
+</script>
+
+</body>
+</html>

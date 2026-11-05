@@ -45,6 +45,11 @@ input[type=text],textarea{font:inherit;color:var(--fg);background:var(--soft-bg)
 textarea{min-height:70px;resize:vertical}
 .state{font-size:.85rem;color:var(--muted)}
 .panel.list{max-height:85%}
+.home{position:fixed;inset:0;z-index:20;background:var(--soft-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;
+  padding:calc(24px + env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px))}
+.home h1{margin:0;font-family:var(--display);font-weight:600;font-size:2.2rem;line-height:1.2;text-wrap:balance}
+.home p{margin:0;font-size:1.25rem;line-height:1.6;max-width:30ch}
+.home button{font-size:1.3rem;padding:16px 48px;min-height:60px}
 .line{border-top:2px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:8px}
 .line h3{margin:0;font-family:var(--display);font-weight:600;font-size:1.2rem}
 .line p{font-size:1.05rem}
@@ -53,6 +58,11 @@ textarea{min-height:70px;resize:vertical}
 </head>
 <body>
 
+<div class="home" id="home">
+  <h1>Come to Costco with Max</h1>
+  <p>Max is visiting Costco today and would like you to come with him. Click the button below to join him and explore Costco.</p>
+  <button type="button" class="primary" id="enterBtn">Enter</button>
+</div>
 <div id="pano"></div>
 <div class="top" id="top">
   <div class="bar">
@@ -112,6 +122,8 @@ $('muteBtn').onclick=()=>{muted=!muted;$('muteBtn').setAttribute('aria-pressed',
 // Modes: child (default), parent (via Grown-ups button), admin (separate link ending #admin)
 const editing=location.hash==='#admin';
 window.addEventListener('hashchange',()=>location.reload());
+if(editing)$('home').hidden=true;
+$('enterBtn').onclick=()=>{$('home').hidden=true};
 if(editing){$('adminTag').hidden=false;$('shareBtn').hidden=false;$('grownBtn').hidden=true;
   $('note').textContent='Tap anywhere on the photo to add a hotspot. Tap a ring to change it.'}
 $('shareBtn').onclick=()=>{

@@ -80,6 +80,8 @@ const BUILT_IN=[
  {"id":"smw3madit","title":"Crowds","text":"There is a crowd of people eating their meal at the food court. Sometimes the crowds make Max anxious because of all the multiple conversations he can hear. He likes to wear his headphones when this happens. But he also enjoys observing people.","yaw":49.4,"pitch":-5}
 ];
 if(!spots.length){spots=JSON.parse(JSON.stringify(BUILT_IN));save()}
+// Built-in sounds (published with the site). A sound added in admin mode on a phone takes priority on that phone.
+const BUILT_SOUNDS={"example":"sounds/tills.wav","smw3madit":"sounds/crowds.wav","smw3m9joi":"sounds/menu.wav"};
 
 // audio files live in this browser (IndexedDB)
 let db=null;
@@ -94,7 +96,9 @@ const FADE=2; // seconds of fade-out before the limit
 const toUrl=b=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=()=>r(null);fr.readAsDataURL(b)});
 function stop(){if(player){player.pause();player=null}syncCtl()}
 function syncCtl(){const c=$('ctl');if(!c)return;c.hidden=!player;const pp=$('cPlay');if(pp&&player)pp.textContent=player.paused?'Play':'Pause'}
-async function play(key){stop();const b=await get(key);if(!b)return;const url=await toUrl(b);if(!url)return;
+async function play(key){stop();const b=await get(key);let url=null;
+  if(b)url=await toUrl(b);else if(key.startsWith('sound:'))url=BUILT_SOUNDS[key.slice(6)]||null;
+  if(!url)return;
   const a=new Audio(url);player=a;a.muted=muted;limit=key.startsWith('sound:')?SOUND_LIMIT:0;
   a.addEventListener('timeupdate',()=>{if(limit&&a.currentTime>=limit){a.pause();syncCtl()}});
   const fade=()=>{if(player!==a)return;if(limit){const left=limit-a.currentTime;a.volume=Math.max(0,Math.min(1,left/FADE));if(left<=0&&!a.paused){a.pause()}}if(!a.paused)requestAnimationFrame(fade)};
@@ -171,7 +175,7 @@ async function openParent(){
 }
 
 async function showSpot(s){
-  const hasVoice=!!(await get('voice:'+s.id)),hasSound=!!(await get('sound:'+s.id));
+  const hasVoice=!!(await get('voice:'+s.id)),hasSound=!!(await get('sound:'+s.id))||!!BUILT_SOUNDS[s.id];
   $('panel').innerHTML='<h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p><div class="bar">'+
     '<button type="button" class="primary" id="pVoice"'+(hasVoice?'':' disabled')+'>Parent reads it</button>'+
     '<button type="button" id="pSound"'+(hasSound?'':' disabled')+'>Hear the sound</button>'+
@@ -191,7 +195,7 @@ function editSpot(s,pos){
     '<div class="bar"><button type="button" class="primary" id="fSave">Save</button>'+(isNew?'':'<button type="button" id="fDel">Delete</button>')+'<button type="button" id="fCancel">Cancel</button></div>';
   $('panel').hidden=false;
   const vk='voice:'+s.id,sk='sound:'+s.id;
-  const refresh=async()=>{$('sSound').textContent=(await get(sk))?'Added':'None yet'};refresh();
+  const refresh=async()=>{$('sSound').textContent=(await get(sk))?'Added on this phone':(BUILT_SOUNDS[s.id]?'Built-in sound':'None yet')};refresh();
   const bind=(id,k)=>$(id).addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const ok=await put(k,f);if(!ok)$('sSound').textContent='Could not save on this phone';else refresh()});bind('fSoundIn',sk);
   $('fSoundX').onclick=async()=>{await del(sk);refresh()};
   $('fCancel').onclick=()=>{if(isNew)del(sk);closePanel()};

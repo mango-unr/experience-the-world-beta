@@ -112,7 +112,16 @@ const ADVENTURES=[
  {id:'tube',label:'Max takes the underground train',image:'tube.jpg',store:'tubeHotspots.v1',
   title:'',
   text:'Max is going to central London today and is going to take the tube. Tap through to explore what the inside of a London underground train looks like.',
-  builtIn:[],
+  builtIn:[
+   {"id": "smwb17huz", "title": "Train doors", "text": "These are the train doors that open at each station where the train stops. Max likes to watch them open and close at each stop. He mimics them with his hands and goes \"boom\" when they close.", "yaw": 162.1, "pitch": -19.6},
+   {"id": "smwb1mkol", "title": "Vents", "text": "These are air vents. They push fresh air into the train. They sometimes make a loud whoosh noise and a gust of wind comes in.", "yaw": 57.2, "pitch": 6.7},
+   {"id": "smwb21gzh", "title": "People", "text": "There are lots of people on the London underground, especially during peak times when people may be getting to or from work.", "yaw": 32.5, "pitch": -25},
+   {"id": "smwb22mqt", "title": "Train windows", "text": "Max enjoys looking out the train window because he can see the stations passing by really really really quickly.", "yaw": 77.8, "pitch": -28.9},
+   {"id": "smwb2dkiz", "title": "Train map", "text": "This is the train map. It has the stops on this train ride.", "yaw": -39.1, "pitch": 18.5},
+   {"id": "smwb2jk0b", "title": "Adverts", "text": "The tube has lots of adverts from local businesses who want people to buy their products.", "yaw": -50.8, "pitch": -2.5},
+   {"id": "smwb2k0cr", "title": "Lights", "text": "These are lights that keep it bright in the train when it goes underground.", "yaw": 35.2, "pitch": 25.7},
+   {"id": "smwb2kfwb", "title": "Train", "text": "This is the train. It gets people from one place in the city to another. It sometimes gets loud as the train starts and speeds up. It can also get loud as it stops at a station. When the noise gets too loud Max can wear his headphones to help.", "yaw": 9.9, "pitch": 26.9}
+  ],
   sounds:{}}
 ];
 
@@ -240,7 +249,7 @@ async function showSpot(s){
   const hasVoice=!!(await get('voice:'+s.id)),hasSound=!!(await get('sound:'+s.id))||!!BUILT_SOUNDS[s.id];
   $('panel').innerHTML='<h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p><div class="bar">'+
     '<button type="button" class="primary" id="pVoice"'+(hasVoice?'':' disabled')+'>Parent reads it</button>'+
-    '<button type="button" id="pSound"'+(hasSound?'':' disabled')+'>Hear the sound</button>'+
+    '<button type="button" class="primary" id="pSound"'+(hasSound?'':' disabled')+'>Hear the sound</button>'+
     '<button type="button" class="danger" id="pClose">Close</button></div>'+
     '<div class="bar" id="ctl" hidden><button type="button" id="cPlay">Pause</button><button type="button" id="cReplay">Replay</button></div>'+
     ((hasVoice&&hasSound)?'':'<span class="state">'+(!hasVoice?'No parent recording yet. ':'')+(!hasSound?'No sound added yet.':'')+'</span>');

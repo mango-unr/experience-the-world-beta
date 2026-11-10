@@ -51,6 +51,9 @@ textarea{min-height:70px;resize:vertical}
 .home p{margin:0;font-size:1.25rem;line-height:1.6;max-width:30ch}
 .home button{font-size:1.3rem;padding:16px 48px;min-height:60px}
 button.danger{background:var(--danger);color:var(--danger-fg);border-color:var(--danger)}
+.picview{position:fixed;inset:0;z-index:30;background:rgba(10,20,20,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.picview img{max-width:100%;max-height:calc(100% - 90px);border-radius:16px;object-fit:contain}
 .advs{display:flex;flex-direction:column;gap:16px;width:min(100%,420px)}
 .home .advs button{justify-content:center;text-align:center;width:100%;padding:18px 24px;min-height:72px;font-size:1.3rem}
 button.back{width:52px;padding:0;justify-content:center;background:var(--surface);color:var(--fg);border-color:var(--line)}
@@ -90,6 +93,7 @@ button.back svg{width:26px;height:26px}
   <div class="note" id="note">Tap a white ring to find out about it.</div>
 </div>
 <div class="panel" id="panel" hidden></div>
+<div class="picview" id="picview" hidden><img id="picImg" alt=""><button type="button" class="danger" id="picClose">Close</button></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js"></script>
 <script>
@@ -108,7 +112,8 @@ const ADVENTURES=[
    {"id":"smw3m9joi","title":"Menu Board","text":"This is the menu Board. It has images of the food being sold and the prices so that people can decide what to eat. Max likes looking at menu boards and memorizing prices","yaw":8,"pitch":9.4},
    {"id":"smw3madit","title":"Crowds","text":"There is a crowd of people eating their meal at the food court. Sometimes the crowds make Max anxious because of all the multiple conversations he can hear. He likes to wear his headphones when this happens. But he also enjoys observing people.","yaw":49.4,"pitch":-5}
   ],
-  sounds:{"example":"sounds/tills.mp3","smw3madit":"sounds/crowds.mp3","smw3m9joi":"sounds/menu.mp3"}},
+  sounds:{"example":"sounds/tills.mp3","smw3madit":"sounds/crowds.mp3","smw3m9joi":"sounds/menu.mp3"},
+  pictures:{}},
  {id:'tube',label:'Max takes the underground train',image:'tube.jpg',store:'tubeHotspots.v1',
   title:'',
   text:'Max is going to central London today and is going to take the tube. Tap through to explore what the inside of a London underground train looks like.',
@@ -122,10 +127,13 @@ const ADVENTURES=[
    {"id": "smwb2k0cr", "title": "Lights", "text": "These are lights that keep it bright in the train when it goes underground.", "yaw": 35.2, "pitch": 25.7},
    {"id": "smwb2kfwb", "title": "Train", "text": "This is the train. It gets people from one place in the city to another. It sometimes gets loud as the train starts and speeds up. It can also get loud as it stops at a station. When the noise gets too loud Max can wear his headphones to help.", "yaw": 9.9, "pitch": 26.9}
   ],
-  sounds:{"smwb17huz":"sounds/tube-doors.mp3","smwb21gzh":"sounds/tube-people.mp3","smwb2kfwb":"sounds/tube-train.mp3","smwb22mqt":"sounds/tube-windows.mp3"}}
+  sounds:{"smwb17huz":"sounds/tube-doors.mp3","smwb21gzh":"sounds/tube-people.mp3","smwb2kfwb":"sounds/tube-train.mp3","smwb22mqt":"sounds/tube-windows.mp3"},
+  // pictures: a hotspot's picture extra, shown full screen; label = its button
+  pictures:{"smwb2dkiz":{src:"pictures/tube-map.png",label:"See the map",alt:"A simple train map with seven stops, from King's Cross St Pancras to Green Park"},
+            "smwb2jk0b":{src:"pictures/tube-advert.png",label:"See the advert",alt:"An advert for Sunny Orange Juice with big oranges"}}}
 ];
 
-let cur=null,spots=[],BUILT_SOUNDS={};
+let cur=null,spots=[],BUILT_SOUNDS={},PICTURES={};
 // Hotspots edited in admin mode are saved on this device; otherwise the built-in ones are used.
 function loadSpots(a){let s=null;try{s=JSON.parse(localStorage.getItem(a.store))}catch(e){}
   return (Array.isArray(s)&&s.length)?s:JSON.parse(JSON.stringify(a.builtIn))}
@@ -172,7 +180,7 @@ function loadScene(a){
   viewer=pannellum.viewer('pano',{type:'equirectangular',panorama:a.image,autoLoad:true,showControls:false,hfov:50,minHfov:50,maxHfov:100,hotSpots:spots.map(cfg)});
 }
 function pick(a){
-  cur=a;spots=loadSpots(a);BUILT_SOUNDS=a.sounds||{};
+  cur=a;spots=loadSpots(a);BUILT_SOUNDS=a.sounds||{};PICTURES=a.pictures||{};
   loadScene(a); // starts loading the photo while the entry page is read
   $('menu').hidden=true;
   if(editing){$('top').hidden=false;return}
@@ -187,6 +195,7 @@ function showMenu(){
 $('advs').innerHTML=ADVENTURES.map((a,i)=>'<button type="button" class="primary" id="adv'+i+'">'+esc(a.label)+'</button>').join('');
 ADVENTURES.forEach((a,i)=>{$('adv'+i).onclick=()=>pick(a)});
 $('enterBtn').onclick=()=>{$('entry').hidden=true;$('top').hidden=false};
+$('picClose').onclick=()=>{$('picview').hidden=true};
 $('entryBack').onclick=showMenu;$('sceneBack').onclick=showMenu;
 
 $('shareBtn').onclick=()=>{
@@ -246,15 +255,17 @@ async function openParent(){
 }
 
 async function showSpot(s){
-  const hasVoice=!!(await get('voice:'+s.id)),hasSound=!!(await get('sound:'+s.id))||!!BUILT_SOUNDS[s.id];
+  const hasVoice=!!(await get('voice:'+s.id)),hasSound=!!(await get('sound:'+s.id))||!!BUILT_SOUNDS[s.id],pic=PICTURES[s.id];
   $('panel').innerHTML='<h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p><div class="bar">'+
     '<button type="button" class="primary" id="pVoice"'+(hasVoice?'':' disabled')+'>Parent reads it</button>'+
-    '<button type="button" class="primary" id="pSound"'+(hasSound?'':' disabled')+'>Hear the sound</button>'+
+    (hasSound?'<button type="button" class="primary" id="pSound">Hear the sound</button>':'')+
+    (pic?'<button type="button" class="primary" id="pPic">'+esc(pic.label)+'</button>':'')+
     '<button type="button" class="danger" id="pClose">Close</button></div>'+
     '<div class="bar" id="ctl" hidden><button type="button" id="cPlay">Pause</button><button type="button" id="cReplay">Replay</button></div>'+
-    ((hasVoice&&hasSound)?'':'<span class="state">'+(!hasVoice?'No parent recording yet. ':'')+(!hasSound?'No sound added yet.':'')+'</span>');
+    (hasVoice?'':'<span class="state">No parent recording yet.</span>');
   $('panel').hidden=false;
-  $('pVoice').onclick=()=>play('voice:'+s.id);$('pSound').onclick=()=>play('sound:'+s.id);$('pClose').onclick=closePanel;$('cPlay').onclick=togglePlay;$('cReplay').onclick=replay;
+  $('pVoice').onclick=()=>play('voice:'+s.id);if(hasSound)$('pSound').onclick=()=>play('sound:'+s.id);
+  if(pic)$('pPic').onclick=()=>{$('picImg').src=pic.src;$('picImg').alt=pic.alt||'';$('picview').hidden=false;$('picClose').focus()};$('pClose').onclick=closePanel;$('cPlay').onclick=togglePlay;$('cReplay').onclick=replay;
 }
 
 function editSpot(s,pos){

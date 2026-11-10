@@ -199,7 +199,7 @@ $('picClose').onclick=()=>{$('picview').hidden=true};
 $('entryBack').onclick=showMenu;$('sceneBack').onclick=showMenu;
 
 $('shareBtn').onclick=()=>{
-  const txt=JSON.stringify({adventure:cur.id,hotspots:spots.map(({id,title,text,yaw,pitch})=>({id,title,text,yaw,pitch}))},null,1);
+  const txt=JSON.stringify({adventure:cur.id,hotspots:spots.map(({id,title,text,yaw,pitch,picLabel})=>({id,title,text,yaw,pitch,picLabel}))},null,1);
   const show=msg=>{$('panel').innerHTML='<h2>Share hotspots with Claude</h2><p>'+msg+'</p><textarea id="shareBox" readonly style="min-height:160px"></textarea><div class="bar"><button type="button" id="shareClose">Close</button></div>';
     $('panel').hidden=false;$('shareBox').value=txt;$('shareClose').onclick=closePanel;return $('shareBox')};
   const fallback=()=>{const b=show('Press and hold the text below, choose Select all, then Copy, and paste it into the chat with Claude.');b.focus();b.select()};
@@ -255,7 +255,9 @@ async function openParent(){
 }
 
 async function showSpot(s){
-  const hasVoice=!!(await get('voice:'+s.id)),hasSound=!!(await get('sound:'+s.id))||!!BUILT_SOUNDS[s.id],pic=PICTURES[s.id];
+  const hasVoice=!!(await get('voice:'+s.id)),hasSound=!!(await get('sound:'+s.id))||!!BUILT_SOUNDS[s.id];
+  const localPic=await get('pic:'+s.id),bp=PICTURES[s.id];
+  const pic=(localPic||bp)?{src:localPic?await toUrl(localPic):bp.src,label:s.picLabel||(bp&&bp.label)||'See the picture',alt:(bp&&!localPic)?bp.alt:s.title}:null;
   $('panel').innerHTML='<h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p><div class="bar">'+
     '<button type="button" class="primary" id="pVoice"'+(hasVoice?'':' disabled')+'>Parent reads it</button>'+
     (hasSound?'<button type="button" class="primary" id="pSound">Hear the sound</button>':'')+
@@ -274,16 +276,21 @@ function editSpot(s,pos){
     '<label for="fTitle">Name<input type="text" id="fTitle" value="'+esc(s.title)+'"></label>'+
     '<label for="fText">What it says<textarea id="fText">'+esc(s.text)+'</textarea></label>'+
     '<div class="bar"><label class="filebtn" for="fSoundIn">Add a sound<input class="vh" type="file" id="fSoundIn" accept="audio/*"></label><button type="button" id="fSoundX">Remove</button><span class="state" id="sSound"></span></div>'+
+    '<div class="bar"><label class="filebtn" for="fPicIn">Add a picture<input class="vh" type="file" id="fPicIn" accept="image/*"></label><button type="button" id="fPicX">Remove</button><span class="state" id="sPic"></span></div>'+
+    '<label for="fPicLabel">Picture button name<input type="text" id="fPicLabel" value="'+esc(s.picLabel||(PICTURES[s.id]&&PICTURES[s.id].label)||'')+'" placeholder="See the picture"></label>'+
     '<div class="bar"><button type="button" class="primary" id="fSave">Save</button>'+(isNew?'':'<button type="button" id="fDel">Delete</button>')+'<button type="button" class="danger" id="fCancel">Cancel</button></div>';
   $('panel').hidden=false;
-  const vk='voice:'+s.id,sk='sound:'+s.id;
-  const refresh=async()=>{$('sSound').textContent=(await get(sk))?'Added on this phone':(BUILT_SOUNDS[s.id]?'Built-in sound':'None yet')};refresh();
+  const vk='voice:'+s.id,sk='sound:'+s.id,pk='pic:'+s.id;
+  const refresh=async()=>{$('sSound').textContent=(await get(sk))?'Added on this phone':(BUILT_SOUNDS[s.id]?'Built-in sound':'None yet');
+    $('sPic').textContent=(await get(pk))?'Added on this phone':(PICTURES[s.id]?'Built-in picture':'None yet')};refresh();
   const bind=(id,k)=>$(id).addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const ok=await put(k,f);if(!ok)$('sSound').textContent='Could not save on this phone';else refresh()});bind('fSoundIn',sk);
+  $('fPicIn').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const ok=await put(pk,f);if(!ok)$('sPic').textContent='Could not save on this phone';else refresh()});
+  $('fPicX').onclick=async()=>{await del(pk);refresh()};
   $('fSoundX').onclick=async()=>{await del(sk);refresh()};
-  $('fCancel').onclick=()=>{if(isNew)del(sk);closePanel()};
+  $('fCancel').onclick=()=>{if(isNew){del(sk);del(pk)}closePanel()};
   $('fSave').onclick=()=>{const t=$('fTitle').value.trim();if(!t){$('fTitle').focus();return}
-    s.title=t;s.text=$('fText').value.trim();if(isNew)spots.push(s);save();redraw();closePanel()};
-  if(!isNew)$('fDel').onclick=()=>{spots=spots.filter(x=>x.id!==s.id);save();del(vk);del(sk);redraw();closePanel()};
+    s.title=t;s.text=$('fText').value.trim();const pl=$('fPicLabel').value.trim();if(pl)s.picLabel=pl;else delete s.picLabel;if(isNew)spots.push(s);save();redraw();closePanel()};
+  if(!isNew)$('fDel').onclick=()=>{spots=spots.filter(x=>x.id!==s.id);save();del(vk);del(sk);del(pk);redraw();closePanel()};
   $('fTitle').focus({preventScroll:true});
 }
 openDb();

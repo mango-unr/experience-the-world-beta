@@ -1,0 +1,32 @@
+rules_version = '2';
+// File storage rules for Experience the World.
+// Everything is locked unless a rule below allows it.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['umangrajdev@gmail.com', 'zebop.trial@gmail.com'];
+    }
+
+    // Sounds and pictures for hotspots: any signed-in family can play/see them; only admins can add or remove them.
+    // Uploads must be sounds or pictures, under 20 MB.
+    match /content/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow create, update: if isAdmin()
+        && request.resource.size < 20 * 1024 * 1024
+        && (request.resource.contentType.matches('audio/.*') || request.resource.contentType.matches('image/.*'));
+      allow delete: if isAdmin();
+    }
+
+    // Each family's recordings: only that family can listen to, add or remove them.
+    // Uploads must be sound files, under 10 MB.
+    match /families/{familyId}/{allPaths=**} {
+      allow read, delete: if request.auth != null && request.auth.uid == familyId;
+      allow create, update: if request.auth != null && request.auth.uid == familyId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+    }
+  }
+}

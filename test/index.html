@@ -113,6 +113,8 @@ button.back svg{width:26px;height:26px}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
 (function(){
@@ -152,10 +154,29 @@ const ADVENTURES=[
 ];
 
 let cur=null,spots=[],BUILT_SOUNDS={},PICTURES={};
-// Hotspots edited in admin mode are saved on this device; otherwise the built-in ones are used.
-function loadSpots(a){let s=null;try{s=JSON.parse(localStorage.getItem(a.store))}catch(e){}
-  return (Array.isArray(s)&&s.length)?s:JSON.parse(JSON.stringify(a.builtIn))}
-const save=()=>{try{localStorage.setItem(cur.store,JSON.stringify(spots))}catch(e){}};
+// ---- Cloud (Firebase): fs = database (words, positions), st = storage (files) ----
+let fs=null,st=null;
+// Hotspots: everyone reads them from the shared database (adventures/<id>). If none are saved there yet, the built-in ones are used.
+function loadSpots(a){return JSON.parse(JSON.stringify(a.builtIn))}
+async function fetchSpots(a){if(!fs)return null;try{const d=await fs.collection('adventures').doc(a.id).get();
+  if(d.exists&&Array.isArray(d.data().hotspots))return d.data().hotspots}catch(e){}return null}
+// Only admins can save; the database's security rules enforce that, not just this page.
+async function save(){if(!fs||!cur)return false;
+  const clean=spots.map(x=>JSON.parse(JSON.stringify({id:x.id,title:x.title,text:x.text,yaw:x.yaw,pitch:x.pitch,picLabel:x.picLabel,soundUrl:x.soundUrl,soundPath:x.soundPath,picUrl:x.picUrl,picPath:x.picPath})));
+  try{await fs.collection('adventures').doc(cur.id).set({hotspots:clean,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:(auth&&auth.currentUser&&auth.currentUser.email)||''});return true}catch(e){return false}}
+// Files in storage. Each family's recordings live in their own folder: families/<their account id>/voice/<hotspot id>
+const uid=()=>auth&&auth.currentUser?auth.currentUser.uid:null;
+const voicePath=id=>uid()?'families/'+uid()+'/voice/'+id:null;
+const urlCache={};
+async function cloudUrl(path){if(!st||!path)return null;if(path in urlCache)return urlCache[path];
+  try{const u=await st.ref(path).getDownloadURL();urlCache[path]=u;return u}catch(e){urlCache[path]=null;return null}}
+function typeOf(f,kind){if(f.type)return f.type;const ext=(f.name||'').split('.').pop().toLowerCase();
+  const m={mp3:'audio/mpeg',m4a:'audio/mp4',aac:'audio/aac',wav:'audio/wav',ogg:'audio/ogg',webm:'audio/webm',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif'};
+  return m[ext]||(kind==='image'?'image/jpeg':'audio/mpeg')}
+async function upload(path,blob,kind){const snap=await st.ref(path).put(blob,{contentType:typeOf(blob,kind)});const u=await snap.ref.getDownloadURL();urlCache[path]=u;return u}
+async function removeFile(path){if(!st||!path)return;try{await st.ref(path).delete()}catch(e){}urlCache[path]=null}
+// Parent's voice for a hotspot: the cloud copy first, then any older recording saved only on this phone
+async function voiceUrl(id){const u=await cloudUrl(voicePath(id));if(u)return u;const b=await get('voice:'+id);return b?await toUrl(b):null}
 
 // audio files live in this browser (IndexedDB)
 let db=null;
@@ -170,8 +191,9 @@ const FADE=2; // seconds of fade-out before the limit
 const toUrl=b=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=()=>r(null);fr.readAsDataURL(b)});
 function stop(){if(player){player.pause();player=null}syncCtl()}
 function syncCtl(){const c=$('ctl');if(!c)return;c.hidden=!player;const pp=$('cPlay');if(pp&&player)pp.textContent=player.paused?'Play':'Pause'}
-async function play(key){stop();const b=await get(key);let url=null;
-  if(b)url=await toUrl(b);else if(key.startsWith('sound:'))url=BUILT_SOUNDS[key.slice(6)]||null;
+async function play(key){stop();let url=null;const id=key.slice(6);
+  if(key.startsWith('voice:'))url=await voiceUrl(id);
+  else if(key.startsWith('sound:')){const h=spots.find(x=>x.id===id);url=(h&&h.soundUrl)||BUILT_SOUNDS[id]||null}
   if(!url)return;
   const a=new Audio(url);player=a;a.muted=muted;limit=key.startsWith('sound:')?SOUND_LIMIT:0;
   a.addEventListener('timeupdate',()=>{if(limit&&a.currentTime>=limit){a.pause();syncCtl()}});
@@ -192,7 +214,7 @@ if(editing){$('adminTag').hidden=false;$('shareBtn').hidden=false;$('adminSignOu
 // ---- Login (Firebase Authentication, Google sign-in) ----
 const ADMINS=['umangrajdev@gmail.com','zebop.trial@gmail.com'];
 let auth=null;
-try{firebase.initializeApp(window.FIREBASE_CONFIG);auth=firebase.auth()}catch(e){}
+try{firebase.initializeApp(window.FIREBASE_CONFIG);auth=firebase.auth();fs=firebase.firestore();st=firebase.storage()}catch(e){}
 function loginScreen(msg,showSignOut){
   if(cur||!$('menu').hidden)showMenu();
   $('menu').hidden=true;$('login').hidden=false;
@@ -227,7 +249,10 @@ else auth.onAuthStateChanged(u=>{
 // ---- Navigation: adventures page -> entry page -> 360 scene ----
 let viewer=null;
 function cfg(s){return{id:s.id,yaw:s.yaw,pitch:s.pitch,cssClass:'hs',createTooltipFunc:d=>{d.dataset.spot=s.id;d.setAttribute('aria-label',s.title)}}}
-function redraw(){if(!viewer)return;(viewer.getConfig().hotSpots||[]).map(h=>h.id).forEach(id=>viewer.removeHotSpot(id));spots.forEach(s=>viewer.addHotSpot(cfg(s)))}
+function redraw(){if(!viewer)return;
+  // if the photo is still loading, redraw once it has loaded
+  if(!viewer.isLoaded()){const v=viewer;if(!v.__waiting){v.__waiting=true;v.on('load',()=>{v.__waiting=false;if(v===viewer)redraw()})}return}
+  (viewer.getConfig().hotSpots||[]).map(h=>h.id).forEach(id=>viewer.removeHotSpot(id));spots.forEach(s=>viewer.addHotSpot(cfg(s)))}
 function loadScene(a){
   if(viewer){try{viewer.destroy()}catch(e){}viewer=null}
   viewer=pannellum.viewer('pano',{type:'equirectangular',panorama:a.image,autoLoad:true,showControls:false,hfov:50,minHfov:50,maxHfov:100,hotSpots:spots.map(cfg)});
@@ -235,6 +260,7 @@ function loadScene(a){
 function pick(a){
   cur=a;spots=loadSpots(a);BUILT_SOUNDS=a.sounds||{};PICTURES=a.pictures||{};
   loadScene(a); // starts loading the photo while the entry page is read
+  fetchSpots(a).then(h=>{if(h&&cur===a){spots=h;redraw()}});
   $('menu').hidden=true;
   if(editing){$('top').hidden=false;return}
   $('entryTitle').textContent=a.title;$('entryTitle').hidden=!a.title;
@@ -271,28 +297,36 @@ function closePanel(){if(rec){try{rec.r.stop()}catch(e){}}stop();$('panel').hidd
 
 // In-app recording (needs microphone access; the Claude app blocks it, a normal website allows it)
 let rec=null;
-async function toggleRec(i,k,refresh){
-  const btn=$('pr'+i),st=$('ps'+i);
+async function toggleRec(i,id,refresh){
+  const btn=$('pr'+i),st0=$('ps'+i);
   if(rec&&rec.i===i){rec.r.stop();return}
-  if(rec){st.textContent='Finish the other recording first';return}
+  if(rec){st0.textContent='Finish the other recording first';return}
   stop();
   let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}
-  catch(e){st.textContent='Recording isn’t available here. It will work once the app is on its own website.';return}
+  catch(e){st0.textContent='The microphone isn’t available. Check the browser allowed it.';return}
   const chunks=[];let r;
-  try{r=new MediaRecorder(stream)}catch(e){stream.getTracks().forEach(t=>t.stop());st.textContent='This phone can’t record here.';return}
-  const t0=Date.now();const tick=setInterval(()=>{st.textContent='Recording… '+Math.floor((Date.now()-t0)/1000)+'s'},250);
+  try{r=new MediaRecorder(stream)}catch(e){stream.getTracks().forEach(t=>t.stop());st0.textContent='This phone can’t record here.';return}
+  const t0=Date.now();const tick=setInterval(()=>{st0.textContent='Recording… '+Math.floor((Date.now()-t0)/1000)+'s'},250);
   r.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
   r.onstop=async()=>{clearInterval(tick);stream.getTracks().forEach(t=>t.stop());rec=null;btn.textContent='Record again';
-    const blob=new Blob(chunks,{type:r.mimeType||'audio/webm'});
-    const ok=blob.size&&await put(k,blob);if(!ok)st.textContent='Could not save on this phone';else refresh()};
-  rec={i,r};r.start();btn.textContent='Stop';st.textContent='Recording… 0s';
+    const blob=new Blob(chunks,{type:(r.mimeType||'audio/webm').split(';')[0]});
+    await saveVoice(id,blob,st0,refresh)};
+  rec={i,r};r.start();btn.textContent='Stop';st0.textContent='Recording… 0s';
+}
+// Upload a parent's recording to their family's private folder
+async function saveVoice(id,blob,statusEl,refresh){
+  if(!blob||!blob.size)return;
+  const path=voicePath(id);if(!path||!st){statusEl.textContent='Please sign in again, then try.';return}
+  statusEl.textContent='Saving…';
+  try{await upload(path,blob,'audio');await del('voice:'+id);refresh()}
+  catch(e){statusEl.textContent='Couldn’t save. Check your internet and try again.'}
 }
 // Parent mode: a list of every hotspot's words in this adventure, with the parent's recording for each
 async function openParent(){
   stop();const p=$('panel');p.classList.add('list');$('top').hidden=true;
   p.innerHTML='<div class="bar"><h2 style="flex:1">Record your voice</h2><button type="button" id="parentDone">Back to child view</button><button type="button" id="parentSignOut">Sign out</button></div>'+
-    '<p style="font-size:1rem">Tap Record, read the words out loud, then tap Stop. You can play it back and record again.</p>'+
+    '<p style="font-size:1rem">Tap Record, read the words out loud, then tap Stop. Your recordings are saved to your family’s account, so they work on any device you sign in on.</p>'+
     (spots.length?'':'<p style="font-size:1rem">There are no hotspots in this adventure yet.</p>')+
     spots.map((s,i)=>'<div class="line"><h3>'+esc(s.title)+'</h3><p>'+esc(s.text)+'</p><div class="bar">'+
       '<button type="button" class="primary" id="pr'+i+'">Record</button>'+
@@ -300,17 +334,19 @@ async function openParent(){
       '<button type="button" id="pp'+i+'">Play</button><button type="button" id="px'+i+'">Remove</button><span class="state" id="ps'+i+'"></span></div></div>').join('')+
     '<div class="bar" id="ctl" hidden><button type="button" id="cPlay">Pause</button><button type="button" id="cReplay">Replay</button></div>';
   p.hidden=false;$('parentDone').onclick=closePanel;$('parentSignOut').onclick=()=>{closePanel();signOut()};$('cPlay').onclick=togglePlay;$('cReplay').onclick=replay;
-  spots.forEach((s,i)=>{const k='voice:'+s.id;
-    const refresh=async()=>{const has=!!(await get(k));$('ps'+i).textContent=has?'Added':'Not recorded yet';$('pp'+i).disabled=!has;$('px'+i).disabled=!has};refresh();
-    $('pv'+i).addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const ok=await put(k,f);if(!ok)$('ps'+i).textContent='Could not save on this phone';else refresh()});
-    $('pr'+i).onclick=()=>toggleRec(i,k,refresh);
-    $('pp'+i).onclick=()=>play(k);$('px'+i).onclick=async()=>{stop();await del(k);refresh()}});
+  spots.forEach((s,i)=>{
+    const refresh=async()=>{const cloud=!!(await cloudUrl(voicePath(s.id))),local=!cloud&&!!(await get('voice:'+s.id));
+      $('ps'+i).textContent=cloud?'Saved':(local?'Saved on this phone only':'Not recorded yet');$('pp'+i).disabled=!(cloud||local);$('px'+i).disabled=!(cloud||local)};refresh();
+    $('pv'+i).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)saveVoice(s.id,f,$('ps'+i),refresh)});
+    $('pr'+i).onclick=()=>toggleRec(i,s.id,refresh);
+    $('pp'+i).onclick=()=>play('voice:'+s.id);
+    $('px'+i).onclick=async()=>{stop();await removeFile(voicePath(s.id));await del('voice:'+s.id);refresh()}});
 }
 
 async function showSpot(s){
-  const hasVoice=!!(await get('voice:'+s.id)),hasSound=!!(await get('sound:'+s.id))||!!BUILT_SOUNDS[s.id];
-  const localPic=await get('pic:'+s.id),bp=PICTURES[s.id];
-  const pic=(localPic||bp)?{src:localPic?await toUrl(localPic):bp.src,label:s.picLabel||(bp&&bp.label)||'See the picture',alt:(bp&&!localPic)?bp.alt:s.title}:null;
+  const hasVoice=!!(await voiceUrl(s.id)),hasSound=!!(s.soundUrl||BUILT_SOUNDS[s.id]);
+  const bp=PICTURES[s.id];
+  const pic=(s.picUrl||bp)?{src:s.picUrl||bp.src,label:s.picLabel||(bp&&bp.label)||'See the picture',alt:(bp&&!s.picUrl)?bp.alt:s.title}:null;
   $('panel').innerHTML='<h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p><div class="bar">'+
     '<button type="button" class="primary" id="pVoice"'+(hasVoice?'':' disabled')+'>Parent reads it</button>'+
     (hasSound?'<button type="button" class="primary" id="pSound">Hear the sound</button>':'')+
@@ -323,27 +359,37 @@ async function showSpot(s){
   if(pic)$('pPic').onclick=()=>{$('picImg').src=pic.src;$('picImg').alt=pic.alt||'';$('picview').hidden=false;$('picClose').focus()};$('pClose').onclick=closePanel;$('cPlay').onclick=togglePlay;$('cReplay').onclick=replay;
 }
 
+// Admin: edit a hotspot. Changes are saved to the shared database, so every family sees them.
 function editSpot(s,pos){
   const isNew=!s;s=s||{id:'s'+Date.now().toString(36),title:'',text:'',yaw:pos.yaw,pitch:pos.pitch};
+  const d=JSON.parse(JSON.stringify(s)); // a working copy; only kept if Save works
+  let busy=0;
   $('panel').innerHTML='<h2>'+(isNew?'New hotspot':'Change hotspot')+'</h2>'+
-    '<label for="fTitle">Name<input type="text" id="fTitle" value="'+esc(s.title)+'"></label>'+
-    '<label for="fText">What it says<textarea id="fText">'+esc(s.text)+'</textarea></label>'+
+    '<label for="fTitle">Name<input type="text" id="fTitle" value="'+esc(d.title)+'"></label>'+
+    '<label for="fText">What it says<textarea id="fText">'+esc(d.text)+'</textarea></label>'+
     '<div class="bar"><label class="filebtn" for="fSoundIn">Add a sound<input class="vh" type="file" id="fSoundIn" accept="audio/*"></label><button type="button" id="fSoundX">Remove</button><span class="state" id="sSound"></span></div>'+
     '<div class="bar"><label class="filebtn" for="fPicIn">Add a picture<input class="vh" type="file" id="fPicIn" accept="image/*"></label><button type="button" id="fPicX">Remove</button><span class="state" id="sPic"></span></div>'+
-    '<label for="fPicLabel">Picture button name<input type="text" id="fPicLabel" value="'+esc(s.picLabel||(PICTURES[s.id]&&PICTURES[s.id].label)||'')+'" placeholder="See the picture"></label>'+
-    '<div class="bar"><button type="button" class="primary" id="fSave">Save</button>'+(isNew?'':'<button type="button" id="fDel">Delete</button>')+'<button type="button" class="danger" id="fCancel">Cancel</button></div>';
+    '<label for="fPicLabel">Picture button name<input type="text" id="fPicLabel" value="'+esc(d.picLabel||(PICTURES[d.id]&&PICTURES[d.id].label)||'')+'" placeholder="See the picture"></label>'+
+    '<div class="bar"><button type="button" class="primary" id="fSave">Save</button>'+(isNew?'':'<button type="button" id="fDel">Delete</button>')+'<button type="button" class="danger" id="fCancel">Cancel</button></div>'+
+    '<span class="state" id="fMsg"></span>';
   $('panel').hidden=false;
-  const vk='voice:'+s.id,sk='sound:'+s.id,pk='pic:'+s.id;
-  const refresh=async()=>{$('sSound').textContent=(await get(sk))?'Added on this phone':(BUILT_SOUNDS[s.id]?'Built-in sound':'None yet');
-    $('sPic').textContent=(await get(pk))?'Added on this phone':(PICTURES[s.id]?'Built-in picture':'None yet')};refresh();
-  const bind=(id,k)=>$(id).addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const ok=await put(k,f);if(!ok)$('sSound').textContent='Could not save on this phone';else refresh()});bind('fSoundIn',sk);
-  $('fPicIn').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const ok=await put(pk,f);if(!ok)$('sPic').textContent='Could not save on this phone';else refresh()});
-  $('fPicX').onclick=async()=>{await del(pk);refresh()};
-  $('fSoundX').onclick=async()=>{await del(sk);refresh()};
-  $('fCancel').onclick=()=>{if(isNew){del(sk);del(pk)}closePanel()};
+  const refresh=()=>{$('sSound').textContent=d.soundUrl?'Added':(BUILT_SOUNDS[d.id]?'Built-in sound':'None yet');
+    $('sPic').textContent=d.picUrl?'Added':(PICTURES[d.id]?'Built-in picture':'None yet');$('fSave').disabled=busy>0};refresh();
+  const addFile=(input,kind,label)=>$(input).addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;
+    const path='content/'+cur.id+'/'+d.id+'/'+kind+'-'+Date.now();busy++;$(label).textContent='Uploading…';$('fSave').disabled=true;
+    try{const u=await upload(path,f,kind==='picture'?'image':'audio');if(kind==='sound'){d.soundUrl=u;d.soundPath=path}else{d.picUrl=u;d.picPath=path}}
+    catch(err){$('fMsg').textContent='The file didn’t upload. Check you’re signed in as an admin and try again.'}
+    busy--;refresh()});
+  addFile('fSoundIn','sound','sSound');addFile('fPicIn','picture','sPic');
+  $('fSoundX').onclick=()=>{delete d.soundUrl;delete d.soundPath;refresh()};
+  $('fPicX').onclick=()=>{delete d.picUrl;delete d.picPath;refresh()};
+  $('fCancel').onclick=closePanel;
+  const commit=async next=>{const before=spots;spots=next;$('fMsg').textContent='Saving…';$('fSave').disabled=true;
+    if(await save()){redraw();closePanel()}else{spots=before;$('fMsg').textContent='Couldn’t save. Check you’re signed in as an admin, then try again.';refresh()}};
   $('fSave').onclick=()=>{const t=$('fTitle').value.trim();if(!t){$('fTitle').focus();return}
-    s.title=t;s.text=$('fText').value.trim();const pl=$('fPicLabel').value.trim();if(pl)s.picLabel=pl;else delete s.picLabel;if(isNew)spots.push(s);save();redraw();closePanel()};
-  if(!isNew)$('fDel').onclick=()=>{spots=spots.filter(x=>x.id!==s.id);save();del(vk);del(sk);del(pk);redraw();closePanel()};
+    d.title=t;d.text=$('fText').value.trim();const pl=$('fPicLabel').value.trim();if(pl)d.picLabel=pl;else delete d.picLabel;
+    commit(isNew?spots.concat([d]):spots.map(x=>x.id===d.id?d:x))};
+  if(!isNew)$('fDel').onclick=()=>commit(spots.filter(x=>x.id!==d.id));
   $('fTitle').focus({preventScroll:true});
 }
 openDb();

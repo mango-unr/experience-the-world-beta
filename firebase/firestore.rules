@@ -1,0 +1,25 @@
+rules_version = '2';
+// Database rules for Experience the World.
+// Everything is locked unless a rule below allows it.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // An admin is someone signed in with one of these Google accounts.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['umangrajdev@gmail.com', 'zebop.trial@gmail.com'];
+    }
+
+    // Adventures and their hotspots: any signed-in family can read them; only admins can change them.
+    match /adventures/{adventureId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Each family's own details (for later, e.g. their cloned voice): only that family can read or change them.
+    match /families/{familyId} {
+      allow read, write: if request.auth != null && request.auth.uid == familyId;
+    }
+  }
+}

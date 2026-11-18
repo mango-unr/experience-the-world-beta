@@ -17,9 +17,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Each family's own details (for later, e.g. their cloned voice): only that family can read or change them.
+    // Each family's own settings (e.g. whether they've seen the welcome screen): only that family can read or change them.
     match /families/{familyId} {
       allow read, write: if request.auth != null && request.auth.uid == familyId;
+    }
+
+    // Each family's cloned-voice record: the family can read it; only the server functions can change it.
+    match /voices/{familyId} {
+      allow read: if request.auth != null && request.auth.uid == familyId;
+      allow write: if false;
     }
   }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "experience-the-world-functions",
+  "description": "Firebase Functions for Experience the World: creates parents' ElevenLabs voices and voiceovers",
+  "private": true,
+  "main": "index.js",
+  "engines": { "node": "22" },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  }
+}

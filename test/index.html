@@ -194,8 +194,9 @@ function syncCtl(){const c=$('ctl');if(!c)return;c.hidden=!player;const pp=$('cP
 async function play(key){stop();let url=null;const id=key.slice(6);
   if(key.startsWith('voice:'))url=await voiceUrl(id);
   else if(key.startsWith('sound:')){const h=spots.find(x=>x.id===id);url=(h&&h.soundUrl)||BUILT_SOUNDS[id]||null}
-  if(!url)return;
-  const a=new Audio(url);player=a;a.muted=muted;limit=key.startsWith('sound:')?SOUND_LIMIT:0;
+  if(!url)return;playUrl(url,key.startsWith('sound:'))}
+function playUrl(url,isSound){stop();
+  const a=new Audio(url);player=a;a.muted=muted;limit=isSound?SOUND_LIMIT:0;
   a.addEventListener('timeupdate',()=>{if(limit&&a.currentTime>=limit){a.pause();syncCtl()}});
   const fade=()=>{if(player!==a)return;if(limit){const left=limit-a.currentTime;a.volume=Math.max(0,Math.min(1,left/FADE));if(left<=0&&!a.paused){a.pause()}}if(!a.paused)requestAnimationFrame(fade)};
   a.addEventListener('play',()=>requestAnimationFrame(fade));
@@ -293,10 +294,12 @@ el.addEventListener('pointerup',e=>{if(!down||!viewer)return;const m=Math.hypot(
   if(hit){const s=spots.find(x=>x.id===hit.dataset.spot);if(s)(editing?editSpot(s):showSpot(s));return}
   if(editing){const [p,y]=viewer.mouseEventToCoords({clientX:e.clientX,clientY:e.clientY});editSpot(null,{pitch:+p.toFixed(1),yaw:+y.toFixed(1)})}},true);
 
-function closePanel(){if(rec){try{rec.r.stop()}catch(e){}}stop();$('panel').hidden=true;$('panel').classList.remove('list');$('panel').innerHTML='';if(cur&&$('entry').hidden)$('top').hidden=false}
+function closePanel(){if(rec){try{rec.r.stop()}catch(e){}}stop();Object.keys(takes).forEach(k=>{URL.revokeObjectURL(takes[k].url);delete takes[k]});$('panel').hidden=true;$('panel').classList.remove('list');$('panel').innerHTML='';if(cur&&$('entry').hidden)$('top').hidden=false}
 
 // In-app recording (needs microphone access; the Claude app blocks it, a normal website allows it)
-let rec=null;
+let rec=null;const takes={}; // unsaved new recordings, by row
+// Show or hide the Listen / Save / Discard buttons for a new, unsaved recording
+function showTake(i,on){['pl','pk','pd'].forEach(k=>$(k+i).hidden=!on);['pv','pp','px'].forEach(k=>{const el=$(k+i);(k==='pv'?el.parentElement:el).hidden=on})}
 async function toggleRec(i,id,refresh){
   const btn=$('pr'+i),st0=$('ps'+i);
   if(rec&&rec.i===i){rec.r.stop();return}
@@ -309,11 +312,13 @@ async function toggleRec(i,id,refresh){
   try{r=new MediaRecorder(stream)}catch(e){stream.getTracks().forEach(t=>t.stop());st0.textContent='This phone can’t record here.';return}
   const t0=Date.now();const tick=setInterval(()=>{st0.textContent='Recording… '+Math.floor((Date.now()-t0)/1000)+'s'},250);
   r.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
-  r.onstop=async()=>{clearInterval(tick);stream.getTracks().forEach(t=>t.stop());rec=null;btn.textContent='Record again';
+  r.onstop=()=>{clearInterval(tick);stream.getTracks().forEach(t=>t.stop());rec=null;if(!document.body.contains(btn))return;btn.textContent='Record again';
     const blob=new Blob(chunks,{type:(r.mimeType||'audio/webm').split(';')[0]});
-    await saveVoice(id,blob,st0,refresh)};
+    if(!blob.size){st0.textContent='Nothing was recorded. Try again.';return}
+    takes[i]={blob,url:URL.createObjectURL(blob)};showTake(i,true);st0.textContent='New recording, not saved yet'};
   rec={i,r};r.start();btn.textContent='Stop';st0.textContent='Recording… 0s';
 }
+function clearTake(i){if(takes[i]){URL.revokeObjectURL(takes[i].url);delete takes[i]}if($('pl'+i))showTake(i,false)}
 // Upload a parent's recording to their family's private folder
 async function saveVoice(id,blob,statusEl,refresh){
   if(!blob||!blob.size)return;
@@ -326,19 +331,25 @@ async function saveVoice(id,blob,statusEl,refresh){
 async function openParent(){
   stop();const p=$('panel');p.classList.add('list');$('top').hidden=true;
   p.innerHTML='<div class="bar"><h2 style="flex:1">Record your voice</h2><button type="button" id="parentDone">Back to child view</button><button type="button" id="parentSignOut">Sign out</button></div>'+
-    '<p style="font-size:1rem">Tap Record, read the words out loud, then tap Stop. Your recordings are saved to your family’s account, so they work on any device you sign in on.</p>'+
+    '<p style="font-size:1rem">Tap Record, read the words out loud, then tap Stop. Listen back, then tap Save to keep it. Saved recordings are kept to your family’s account, so they work on any device you sign in on.</p>'+
     (spots.length?'':'<p style="font-size:1rem">There are no hotspots in this adventure yet.</p>')+
     spots.map((s,i)=>'<div class="line"><h3>'+esc(s.title)+'</h3><p>'+esc(s.text)+'</p><div class="bar">'+
       '<button type="button" class="primary" id="pr'+i+'">Record</button>'+
       '<label class="filebtn" for="pv'+i+'">Add a file<input class="vh" type="file" id="pv'+i+'" accept="audio/*"></label>'+
-      '<button type="button" id="pp'+i+'">Play</button><button type="button" id="px'+i+'">Remove</button><span class="state" id="ps'+i+'"></span></div></div>').join('')+
+      '<button type="button" id="pp'+i+'">Play</button><button type="button" id="px'+i+'">Remove</button>'+
+      '<button type="button" id="pl'+i+'" hidden>Listen</button><button type="button" class="primary" id="pk'+i+'" hidden>Save</button><button type="button" class="danger" id="pd'+i+'" hidden>Discard</button>'+
+      '<span class="state" id="ps'+i+'"></span></div></div>').join('')+
     '<div class="bar" id="ctl" hidden><button type="button" id="cPlay">Pause</button><button type="button" id="cReplay">Replay</button></div>';
   p.hidden=false;$('parentDone').onclick=closePanel;$('parentSignOut').onclick=()=>{closePanel();signOut()};$('cPlay').onclick=togglePlay;$('cReplay').onclick=replay;
   spots.forEach((s,i)=>{
     const refresh=async()=>{const cloud=!!(await cloudUrl(voicePath(s.id))),local=!cloud&&!!(await get('voice:'+s.id));
       $('ps'+i).textContent=cloud?'Saved':(local?'Saved on this phone only':'Not recorded yet');$('pp'+i).disabled=!(cloud||local);$('px'+i).disabled=!(cloud||local)};refresh();
     $('pv'+i).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)saveVoice(s.id,f,$('ps'+i),refresh)});
-    $('pr'+i).onclick=()=>toggleRec(i,s.id,refresh);
+    $('pr'+i).onclick=()=>{if(rec&&rec.i===i)return toggleRec(i,s.id,refresh);stop();clearTake(i);toggleRec(i,s.id,refresh)};
+    $('pl'+i).onclick=()=>{if(takes[i])playUrl(takes[i].url,false)};
+    $('pk'+i).onclick=async()=>{const t=takes[i];if(!t)return;stop();$('pk'+i).disabled=true;await saveVoice(s.id,t.blob,$('ps'+i),refresh);
+      $('pk'+i).disabled=false;if($('ps'+i).textContent!=='Saved')return;clearTake(i)};
+    $('pd'+i).onclick=()=>{stop();clearTake(i);$('pr'+i).textContent='Record';refresh()};
     $('pp'+i).onclick=()=>play('voice:'+s.id);
     $('px'+i).onclick=async()=>{stop();await removeFile(voicePath(s.id));await del('voice:'+s.id);refresh()}});
 }

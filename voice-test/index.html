@@ -90,6 +90,16 @@ button.remove{color:var(--danger);border-color:var(--danger);background:transpar
 .home .player .pp{padding:0;min-height:44px}
 .home .obv button.btn-wide,.home .obbot .bar button{padding:14px 18px;min-height:56px;font-size:1.1rem}
 @media (prefers-reduced-motion:reduce){.spinner{animation-duration:3s}}
+.wglobe{width:120px;height:120px;align-self:center}
+.wdots{display:flex;gap:10px;justify-content:center}
+.wdots span{width:12px;height:12px;border-radius:50%;background:var(--line);transition:background .3s}
+.wdots span.done{background:var(--btn)}
+.wdots span.now{background:var(--btn);animation:wpulse 1.2s ease-in-out infinite}
+@keyframes wpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+.wbar{width:100%;max-width:320px;height:10px;border-radius:5px;background:var(--line);overflow:hidden;align-self:center}
+.wbar i{display:block;height:100%;width:0;background:var(--btn);transition:width .5s linear}
+.wslow{color:var(--fg)!important;font-weight:600}
+@media (prefers-reduced-motion:reduce){.wdots span.now{animation-duration:3s}}
 .remember{flex-direction:row;align-items:center;gap:10px;font-size:1.05rem;color:var(--fg);cursor:pointer}
 .remember input{width:24px;height:24px;accent-color:var(--btn);margin:0}
 .loginMsg{font-size:1rem!important;color:var(--muted)}
@@ -170,9 +180,27 @@ button.back svg{width:26px;height:26px}
     <p class="hint" id="obMsg"></p>
   </div>
   <div class="obv" id="ob5" hidden style="align-items:center;text-align:center">
-    <div class="spinner" aria-hidden="true"></div>
-    <h2 id="obProgress">Creating your voice…</h2>
-    <p class="hint">This can take a minute or two. Please keep this page open.</p>
+    <svg class="wglobe" viewBox="0 0 96 96" aria-hidden="true">
+      <defs><clipPath id="wclip"><circle cx="48" cy="48" r="28"/></clipPath></defs>
+      <circle cx="48" cy="48" r="28" fill="var(--soft-bg)" stroke="var(--btn)" stroke-width="3"/>
+      <g clip-path="url(#wclip)" fill="none" stroke="var(--btn)" stroke-width="2.5"><ellipse id="wm0" cx="48" cy="48" rx="11" ry="28"/><ellipse id="wm1" cx="48" cy="48" rx="11" ry="28"/><ellipse id="wm2" cx="48" cy="48" rx="11" ry="28"/></g>
+      <line x1="20" y1="48" x2="76" y2="48" stroke="var(--btn)" stroke-width="2.5"/>
+      <path d="M10 52 A40 14 0 0 0 86 52" fill="none" stroke="#185FA5" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M80 44 L87 52 L77 56" fill="none" stroke="#185FA5" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h2 id="obWaitTitle">Setting up your voice</h2>
+    <div id="obWaiting" style="display:flex;flex-direction:column;gap:12px;width:100%;align-items:center">
+      <p class="hint" id="obProgress" aria-live="polite">Uploading your recording</p>
+      <div class="wdots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <div class="wbar" role="progressbar" aria-label="Setting up your voice" aria-valuemin="0" aria-valuemax="100" id="obWBarWrap"><i id="obWBar"></i></div>
+      <p class="hint" id="obLeft">About a minute left</p>
+      <p class="hint wslow" id="obSlow" hidden>This is taking longer than usual, but it’s still working.</p>
+      <p class="hint">Keep this page open.</p>
+    </div>
+    <div id="obErr" hidden style="display:flex;flex-direction:column;gap:12px;align-items:center">
+      <p id="obErrMsg"></p>
+      <button type="button" class="primary btn-wide" id="obRetry">Try again</button>
+    </div>
   </div>
   <div class="obv" id="ob6" hidden style="text-align:center">
     <h2>Your voice is ready</h2>
@@ -619,24 +647,63 @@ $('obStop').onclick=()=>{if(obRec)obRec.r.stop()};
 $('obAgain').onclick=()=>resetRecorder();
 $('obUse').onclick=()=>{reviewPlayer.stop();$('obAgree').checked=false;$('obCreate').disabled=true;$('obMsg').textContent='';obShow(4)};
 
-// Create the voice, then voiceovers for every place
-$('obCreate').onclick=async()=>{
-  if(!$('obAgree').checked||!obBlob)return;
+// Create the voice, then voiceovers for every place, with a waiting screen that shows progress
+// Steps: 0 upload, 1 create voice, 2 read the places (one part per adventure), 3 sample. Rough expected seconds per part.
+const WAIT_NAMES={costco:'Costco',tube:'the Tube'};
+const wait={parts:[],i:0,t0:0,partT0:0,timer:0,raf:0,voiceMade:false,busy:false};
+function waitParts(){return [{label:'Uploading your recording',dot:0,secs:4},{label:'Creating your voice',dot:1,secs:15}]
+  .concat(ADVENTURES.map(a=>({label:'Reading the places ('+(WAIT_NAMES[a.id]||a.label)+')',dot:2,secs:15})))
+  .concat([{label:'Making your sample',dot:3,secs:4}])}
+function waitDraw(){const P=wait.parts,i=wait.i,el=(Date.now()-wait.partT0)/1000,total=P.reduce((n,p)=>n+p.secs,0);
+  let before=0;for(let k=0;k<i;k++)before+=P[k].secs;
+  // inside a step the bar creeps towards the end of that step but never reaches it until the step really finishes
+  const inStep=P[i]?P[i].secs*Math.min(0.9,el/P[i].secs):0,pct=Math.round(Math.min(99,(before+inStep)/total*100));
+  $('obWBar').style.width=pct+'%';$('obWBarWrap').setAttribute('aria-valuenow',pct);
+  const slow=(P[i]&&el>Math.max(30,P[i].secs*3))||(Date.now()-wait.t0)/1000>90;
+  $('obSlow').hidden=!slow;$('obLeft').hidden=slow;
+  let left=0;for(let k=i;k<P.length;k++)left+=P[k].secs;left=Math.max(0,left-Math.min(el,P[i]?P[i].secs:0));
+  $('obLeft').textContent=left>45?'About a minute left':left>8?'About '+Math.ceil(left/10)*10+' seconds left':'Almost there'}
+function waitStep(i){wait.i=i;wait.partT0=Date.now();const p=wait.parts[i];$('obProgress').textContent=p.label;
+  [...document.querySelectorAll('#ob5 .wdots span')].forEach((d,k)=>{d.className=k<p.dot?'done':k===p.dot?'now':''});waitDraw()}
+function waitSpin(){const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches,t0=Date.now();
+  const f=()=>{const a=(Date.now()-t0)/1000*(reduce?0.4:1.6);
+    for(let k=0;k<3;k++){const ph=a+k*Math.PI/3,m=$('wm'+k);if(m)m.setAttribute('rx',Math.abs(28*Math.cos(ph)).toFixed(1))}
+    wait.raf=requestAnimationFrame(f)};f()}
+function waitStart(){wait.parts=waitParts();wait.t0=Date.now();wait.busy=true;$('obErr').hidden=true;$('obWaiting').hidden=false;
+  $('obWaitTitle').textContent='Setting up your voice';obShow(5);cancelAnimationFrame(wait.raf);waitSpin();
+  clearInterval(wait.timer);wait.timer=setInterval(waitDraw,500)}
+function waitStop(){wait.busy=false;clearInterval(wait.timer);cancelAnimationFrame(wait.raf)}
+function waitError(msg){waitStop();$('obWaiting').hidden=true;$('obWaitTitle').textContent='That didn’t work';$('obErrMsg').textContent=msg;$('obErr').hidden=false}
+// The phone's own "leave this page?" warning while setup is running
+window.addEventListener('beforeunload',e=>{if(wait.busy){e.preventDefault();e.returnValue=''}});
+function errText(e){const c=e&&e.code||'';
+  if(c.indexOf('unauthenticated')>=0)return 'You’ve been signed out. Sign in again, then try again. Your recording is kept.';
+  if(c.indexOf('not-found')>=0||c.indexOf('invalid-argument')>=0)return 'Your recording didn’t upload properly. Try again. Your recording is kept, so you don’t need to read it again.';
+  if(!navigator.onLine)return 'Your phone seems to be offline. Check your internet, then try again. Your recording is kept.';
+  return 'We couldn’t set up your voice just now. Try again in a moment. Your recording is kept, so you don’t need to read it again.'}
+async function runSetup(){
   if(!fns||!st||!uid()){$('obMsg').textContent='Please sign in again, then try.';return}
-  obShow(5);$('obProgress').textContent='Creating your voice…';
+  waitStart();
   try{
-    const ext={'audio/webm':'webm','audio/mp4':'m4a','audio/ogg':'ogg','audio/mpeg':'mp3','audio/wav':'wav'}[obBlob.type]||'webm';
-    const path='families/'+uid()+'/sample/sample-'+Date.now()+'.'+ext;
-    await upload(path,obBlob,'audio');
-    await fns.httpsCallable('createVoice')({samplePath:path,consent:true});
-    voiceState.exists=true;voiceState.loaded=true;forgetAuto();
-    $('obProgress').textContent='Making voiceovers for every place…';
-    for(const a of ADVENTURES){const list=(await fetchSpots(a))||a.builtIn;await ensureVoiceovers(a,list)}
+    if(!wait.voiceMade){
+      waitStep(0);
+      const ext={'audio/webm':'webm','audio/mp4':'m4a','audio/ogg':'ogg','audio/mpeg':'mp3','audio/wav':'wav'}[obBlob.type]||'webm';
+      const path='families/'+uid()+'/sample/sample-'+Date.now()+'.'+ext;
+      await upload(path,obBlob,'audio');
+      waitStep(1);
+      await fns.httpsCallable('createVoice')({samplePath:path,consent:true});
+      wait.voiceMade=true;voiceState.exists=true;voiceState.loaded=true;forgetAuto();
+    }
+    // any voiceover that fails here is made later, the next time that place is opened
+    for(let k=0;k<ADVENTURES.length;k++){const a=ADVENTURES[k];waitStep(2+k);const list=(await fetchSpots(a))||a.builtIn;await ensureVoiceovers(a,list)}
+    waitStep(2+ADVENTURES.length);
     forgetAuto();delete urlCache['families/'+uid()+'/auto/sample.mp3'];
-    samplePlayer.load(await cloudUrl('families/'+uid()+'/auto/sample.mp3'));
-    markOnboarded();obShow(6);
-  }catch(e){obShow(4);$('obMsg').textContent='Sorry, we couldn’t create your voice just now. Please try again in a moment.'}
-};
+    try{samplePlayer.load(await cloudUrl('families/'+uid()+'/auto/sample.mp3'))}catch(e){}
+    $('obWBar').style.width='100%';waitStop();wait.voiceMade=false;markOnboarded();obShow(6);
+  }catch(e){waitError(errText(e))}
+}
+$('obCreate').onclick=()=>{if(!$('obAgree').checked||!obBlob)return;wait.voiceMade=false;runSetup()};
+$('obRetry').onclick=()=>runSetup();
 
 // Grown-ups: the "your voice" card at the top
 function renderVoiceCard(){const c=$('vcard');if(!c)return;

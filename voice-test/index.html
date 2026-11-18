@@ -74,6 +74,19 @@ button.remove{color:var(--danger);border-color:var(--danger);background:transpar
 .pbar{height:8px;border-radius:4px;background:var(--line);width:100%;overflow:hidden}.pbar i{display:block;height:100%;width:0;background:var(--btn);border-radius:4px}
 .hint{font-size:.85rem;color:var(--muted);text-align:center}
 #obWave{width:100%;max-width:320px;height:40px}
+.vrow{border:2px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.vhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.vhead h3{margin:0;font-family:var(--display);font-weight:600;font-size:1.15rem}
+.badge{font-size:.85rem;border-radius:8px;padding:3px 10px;background:var(--soft-bg);color:var(--fg);border:1px solid var(--line)}
+.badge.own{border-color:var(--btn);color:var(--btn)}
+.words{background:var(--soft-bg);border-radius:12px;padding:10px 12px;font-size:1.1rem!important;line-height:1.6}
+.choice{display:flex;gap:8px}.choice button{flex:1;justify-content:center;background:var(--surface);color:var(--fg);border:2px solid var(--line)}
+.choice button[aria-pressed="true"]{border-color:var(--btn);color:var(--btn);background:var(--surface);font-weight:600}
+.recrow{display:flex;align-items:center;gap:14px}
+.recbtn.sm{width:64px;height:64px;min-height:64px;box-shadow:0 0 0 6px color-mix(in srgb,var(--danger) 18%,transparent);flex:none}
+.recbtn.sm svg{width:28px;height:28px}
+.xbtn{width:44px;height:44px;min-height:44px;border-radius:50%;padding:0;justify-content:center;flex:none;color:var(--danger);border:2px solid var(--danger);background:transparent;font-size:1.3rem;line-height:1}
+.vrow .player{padding-right:6px}
 .player{display:flex;align-items:center;gap:12px;background:var(--surface);border:2px solid var(--line);border-radius:999px;padding:6px 14px 6px 6px;width:100%}
 .player .pp{width:44px;height:44px;min-height:44px;border-radius:50%;padding:0;justify-content:center;background:var(--btn);border-color:var(--btn);flex:none}
 .player .pp svg{width:20px;height:20px}
@@ -141,9 +154,9 @@ button.back svg{width:26px;height:26px}
   </div>
   <div class="obv" id="ob2" hidden>
     <h1>Read this out loud</h1>
-    <p>On the next page there’s a short passage to read. It takes about a minute.</p>
+    <p>On the next page there’s a short passage to read. It takes about two minutes.</p>
     <div class="obcard"><b style="font-family:var(--display);font-weight:600;font-size:1.1rem">Before you begin</b>
-      <ul><li>Find a quiet room and turn off the TV or music</li><li>Hold your phone a couple of inches from your mouth</li><li>Read the way you’d read a story to your child: calm and warm</li><li>Keep the same pace all the way through. If you slip, just carry on</li><li>Scroll gently with one finger as you read</li></ul></div>
+      <ul><li>Find a quiet room and turn off the TV or music</li><li>Use your phone if you can. Its microphone usually sounds better than a laptop’s</li><li>Hold your phone a couple of inches from your mouth</li><li>Read the way you’d read a story to your child: calm and warm</li><li>Keep the same pace all the way through. If you slip, just carry on</li><li>Scroll gently with one finger as you read</li></ul></div>
     <button type="button" class="primary btn-wide" id="obBegin">Begin</button>
     <button type="button" class="linkbtn" id="obBack2">Back</button>
   </div>
@@ -152,12 +165,12 @@ button.back svg{width:26px;height:26px}
     <div class="obbot">
       <div id="obIdle" class="obbot" style="border:0;padding:0;flex:none">
         <button type="button" class="recbtn" id="obMic" aria-label="Start recording"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="#fff"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
-        <div class="timer">0:00</div><div class="hint">Tap to start recording · aim for about 1 minute</div>
+        <div class="timer">0:00</div><div class="hint">Tap to start recording · aim for about 2 minutes</div>
         <button type="button" class="linkbtn" id="obBack3">Back</button>
       </div>
       <div id="obRecording" class="obbot" style="border:0;padding:0;flex:none;width:100%" hidden>
         <canvas id="obWave" width="640" height="80" aria-hidden="true"></canvas>
-        <div class="timer" id="obTime">0:00</div><div class="pbar"><i id="obBar"></i></div><div class="hint">Aim for about 1:00</div>
+        <div class="timer" id="obTime">0:00</div><div class="pbar"><i id="obBar"></i></div><div class="hint">Aim for about 2:00</div>
         <button type="button" class="recbtn" id="obStop" aria-label="Stop recording"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="#fff"/></svg></button><div class="hint">Tap to stop</div>
       </div>
       <div id="obReview" class="obbot" style="border:0;padding:0;flex:none;width:100%" hidden>
@@ -308,8 +321,14 @@ async function removeFile(path){if(!st||!path)return;try{await st.ref(path).dele
 // Parent's voice for a hotspot: the cloud copy first, then any older recording saved only on this phone
 const autoPath=(id,adv)=>uid()?'families/'+uid()+'/auto/'+(adv||(cur&&cur.id))+'/'+id+'.mp3':null;
 // What plays for a hotspot: the parent's own recording first, then an older phone-only recording, then their automatic voice
-async function voiceUrl(id){const u=await cloudUrl(voicePath(id));if(u)return u;const b=await get('voice:'+id);if(b)return await toUrl(b);
+// A parent can choose the automatic voice for a place even when they've recorded it themselves (saved in families/<account>.plays)
+let famPlays={};
+const playsKey=id=>(cur&&cur.id)+'__'+id;
+async function voiceUrl(id){
+  if(famPlays[playsKey(id)]==='auto'&&voiceState.exists){const a=await cloudUrl(autoPath(id));if(a)return a}
+  const u=await cloudUrl(voicePath(id));if(u)return u;const b=await get('voice:'+id);if(b)return await toUrl(b);
   return voiceState.exists?await cloudUrl(autoPath(id)):null}
+function setPlays(id,v){famPlays[playsKey(id)]=v;if(fs&&uid())fs.collection('families').doc(uid()).set({plays:{[playsKey(id)]:v}},{merge:true}).catch(()=>{})}
 // The family's cloned voice (a record the server keeps in voices/<account>)
 const voiceState={exists:false,loaded:false};
 async function loadVoiceState(){voiceState.loaded=false;voiceState.exists=false;if(!fs||!uid())return;
@@ -390,7 +409,7 @@ else auth.onAuthStateChanged(u=>{
   $('login').hidden=true;
   loadVoiceState();
   if(editing){if(!cur)$('menu').hidden=false;return}
-  familyDoc().then(f=>{if(cur)return;if(f.onboarded)$('menu').hidden=false;else openOnboarding(1)});
+  familyDoc().then(f=>{famPlays=(f&&f.plays)||{};if(cur)return;if(f.onboarded)$('menu').hidden=false;else openOnboarding(1)});
 });
 
 // ---- Family settings: families/<account> (e.g. whether they've seen the welcome screen) ----
@@ -444,12 +463,21 @@ el.addEventListener('pointerup',e=>{if(!down||!viewer)return;const m=Math.hypot(
   if(hit){const s=spots.find(x=>x.id===hit.dataset.spot);if(s)(editing?editSpot(s):showSpot(s));return}
   if(editing){const [p,y]=viewer.mouseEventToCoords({clientX:e.clientX,clientY:e.clientY});editSpot(null,{pitch:+p.toFixed(1),yaw:+y.toFixed(1)})}},true);
 
-function closePanel(){if(rec){try{rec.r.stop()}catch(e){}}stop();Object.keys(takes).forEach(k=>{URL.revokeObjectURL(takes[k].url);delete takes[k]});$('panel').hidden=true;$('panel').classList.remove('list');$('panel').innerHTML='';if(cur&&$('entry').hidden)$('top').hidden=false}
+function closePanel(){if(rec){try{rec.r.stop()}catch(e){}}stop();obPlayers.forEach(x=>x.stop());Object.keys(takes).forEach(k=>{URL.revokeObjectURL(takes[k].url);delete takes[k]});$('panel').hidden=true;$('panel').classList.remove('list');$('panel').innerHTML='';if(cur&&$('entry').hidden)$('top').hidden=false}
 
 // In-app recording (needs microphone access; the Claude app blocks it, a normal website allows it)
 let rec=null;const takes={}; // unsaved new recordings, by row
 // Show or hide the Listen / Save / Discard buttons for a new, unsaved recording
 function showTake(i,on){if(!$('pr'+i))return;const rb=$('pr'+i);rb.classList.remove('danger');rb.classList.toggle('primary',!on);['pl','pk','pd'].forEach(k=>$(k+i).hidden=!on);['pp','px'].forEach(k=>{$(k+i).hidden=on})}
+// Recording quality. For setting up the cloned voice we switch off the browser's video-call processing
+// (echo cancelling, noise removal, volume levelling), which flattens a voice, and record at a higher quality.
+async function getMic(raw){
+  const c=raw?{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}:true;
+  try{return await navigator.mediaDevices.getUserMedia({audio:c})}catch(e){if(raw&&e&&e.name==='OverconstrainedError')return await navigator.mediaDevices.getUserMedia({audio:true});throw e}}
+function newRecorder(stream){
+  const types=['audio/webm;codecs=opus','audio/mp4','audio/webm'];
+  const t=window.MediaRecorder&&MediaRecorder.isTypeSupported?types.find(x=>MediaRecorder.isTypeSupported(x)):null;
+  try{return new MediaRecorder(stream,Object.assign({audioBitsPerSecond:128000},t?{mimeType:t}:{}))}catch(e){return new MediaRecorder(stream)}}
 async function toggleRec(i,id,refresh){
   const btn=$('pr'+i),st0=$('ps'+i);
   if(rec&&rec.i===i){rec.r.stop();return}
@@ -478,33 +506,76 @@ async function saveVoice(id,blob,statusEl,refresh){
   catch(e){statusEl.textContent='Couldn’t save. Check your internet and try again.';return false}
 }
 // Parent mode: a list of every hotspot's words in this adventure, with the parent's recording for each
+const MIC_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="#fff"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+const STOP_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="#fff"/></svg>';
+const playerHtml=(id,x)=>'<div class="bar" style="flex-wrap:nowrap"><div class="player" id="'+id+'"><button type="button" class="pp" aria-label="Play">'+PLAY_SVG+'</button><div class="pbar"><i></i></div><span class="ptime">Play</span></div>'+(x?'<button type="button" class="xbtn" id="'+x+'" aria-label="Delete your recording">×</button>':'')+'</div>';
+// Grown-ups: the voice card, then one card per place. Each place plays the automatic voice unless the parent records their own.
 async function openParent(){
   stop();const p=$('panel');p.classList.add('list');$('top').hidden=true;
   if(!voiceState.loaded)await loadVoiceState();
-  p.innerHTML='<div class="bar"><h2 style="flex:1">Your voice</h2><button type="button" id="parentDone">Back to child view</button><button type="button" id="parentSignOut">Sign out</button></div>'+
+  const name=(typeof WAIT_NAMES!=='undefined'&&cur&&WAIT_NAMES[cur.id])||(cur&&cur.label)||'';
+  p.innerHTML='<div class="bar"><h2 style="flex:1">Grown-ups</h2><button type="button" id="parentSignOut">Sign out</button><button type="button" class="danger" id="parentDone">Close</button></div>'+
     '<div class="vcard" id="vcard"></div>'+
-    '<p style="font-size:1rem">To use your own recording for a place, tap Record, read the words, then Stop, listen back and Save. Your recording plays instead of your automatic voice.</p>'+
-    (spots.length?'':'<p style="font-size:1rem">There are no hotspots in this adventure yet.</p>')+
-    spots.map((s,i)=>'<div class="line"><h3>'+esc(s.title)+'</h3><p>'+esc(s.text)+'</p><div class="bar">'+
-      '<button type="button" class="primary" id="pr'+i+'">Record</button>'+
-      '<button type="button" id="pp'+i+'">Play</button><button type="button" class="remove" id="px'+i+'">Remove</button>'+
-      '<button type="button" id="pl'+i+'" hidden>Listen</button><button type="button" class="primary" id="pk'+i+'" hidden>Save</button><button type="button" class="danger" id="pd'+i+'" hidden>Discard</button>'+
-      '<span class="state" id="ps'+i+'"></span></div></div>').join('')+
-    '<div class="bar" id="ctl" hidden><button type="button" id="cPlay">Pause</button><button type="button" id="cReplay">Replay</button></div>';
-  p.hidden=false;renderVoiceCard();$('parentDone').onclick=closePanel;$('parentSignOut').onclick=()=>{closePanel();signOut()};$('cPlay').onclick=togglePlay;$('cReplay').onclick=replay;
-  spots.forEach((s,i)=>{
-    const refresh=async()=>{const cloud=!!(await cloudUrl(voicePath(s.id))),local=!cloud&&!!(await get('voice:'+s.id));
-      const auto=!cloud&&!local&&voiceState.exists&&!!(await cloudUrl(autoPath(s.id)));
-      if(!$('ps'+i))return;
-      $('ps'+i).textContent=cloud?'Your recording':(local?'Your recording (on this phone only)':(auto?'Your voice (automatic)':'Not recorded yet'));
-      $('pp'+i).disabled=!(cloud||local||auto);$('px'+i).disabled=!(cloud||local)};refresh();
-    $('pr'+i).onclick=()=>{if(rec&&rec.i===i)return toggleRec(i,s.id,refresh);stop();clearTake(i);toggleRec(i,s.id,refresh)};
-    $('pl'+i).onclick=()=>{if(takes[i])playUrl(takes[i].url,false)};
-    $('pk'+i).onclick=async()=>{const t=takes[i];if(!t)return;stop();$('pk'+i).disabled=true;const ok=await saveVoice(s.id,t.blob,$('ps'+i),refresh);
-      $('pk'+i).disabled=false;if(ok)clearTake(i)};
-    $('pd'+i).onclick=()=>{stop();clearTake(i);$('pr'+i).textContent='Record';refresh()};
-    $('pp'+i).onclick=()=>play('voice:'+s.id);
-    $('px'+i).onclick=async()=>{stop();await removeFile(voicePath(s.id));await del('voice:'+s.id);refresh()}});
+    '<h3 style="margin:6px 0 0;font-family:var(--display);font-weight:600;font-size:1.2rem">'+esc(name.replace(/^the /,'The '))+'</h3>'+
+    (spots.length?'':'<p style="font-size:1rem">There are no places in this adventure yet.</p>')+
+    spots.map((s,i)=>'<div class="vrow" id="row'+i+'"><div class="vhead"><h3>'+esc(s.title)+'</h3><span class="badge" id="pb'+i+'"></span></div><div id="pbody'+i+'" style="display:flex;flex-direction:column;gap:10px"></div><span class="state" id="ps'+i+'"></span></div>').join('');
+  p.hidden=false;renderVoiceCard();$('parentDone').onclick=closePanel;$('parentSignOut').onclick=()=>{closePanel();signOut()};
+  spots.forEach((s,i)=>parentRow(s,i));
+}
+function parentRow(s,i){
+  const R={mode:'view',own:null,local:false,auto:null,take:null};
+  const load=async()=>{R.own=await cloudUrl(voicePath(s.id));R.local=false;
+    if(!R.own){const b=await get('voice:'+s.id);if(b){R.own=await toUrl(b);R.local=true}}
+    R.auto=voiceState.exists?await cloudUrl(autoPath(s.id)):null};
+  const msg=t=>{if($('ps'+i))$('ps'+i).textContent=t||''};
+  const draw=()=>{const body=$('pbody'+i);if(!body)return;
+    const useAuto=R.auto&&(!R.own||famPlays[playsKey(s.id)]==='auto');
+    $('pb'+i).textContent=useAuto?'Your voice (automatic)':R.own?(R.local?'Your recording (on this phone only)':'Your recording'):'Not recorded yet';
+    $('pb'+i).className='badge'+(R.own&&!useAuto?' own':'');
+    let h='';
+    if(R.mode==='view'||R.mode==='confirm'){
+      if(R.own&&R.auto)h+='<span class="hint" style="text-align:left">Which one plays?</span><div class="choice"><button type="button" id="co'+i+'" aria-pressed="'+!useAuto+'">Your recording</button><button type="button" id="ca'+i+'" aria-pressed="'+!!useAuto+'">Automatic</button></div>';
+      if(R.own||R.auto)h+=playerHtml('pp'+i,R.own?'px'+i:null);
+      if(R.mode==='confirm')h+='<p style="font-size:1rem">Delete your recording for this place? This can’t be undone.</p><div class="bar"><button type="button" class="danger" id="pxy'+i+'">Delete</button><button type="button" id="pxn'+i+'">Keep</button></div>';
+      else h+='<div class="bar"><button type="button" id="pr'+i+'">'+(R.own?'Replace':'Record it myself')+'</button></div>';
+    }else if(R.mode==='rec'||R.mode==='recording'){
+      const on=R.mode==='recording';
+      h+='<p class="words">Read this: “'+esc(s.text)+'”</p>'+
+        '<div class="recrow"><button type="button" class="recbtn sm" id="pm'+i+'" aria-label="'+(on?'Stop recording':'Start recording')+'">'+(on?STOP_SVG:MIC_SVG)+'</button>'+
+        '<span class="hint" style="flex:1;text-align:left" id="pt'+i+'">'+(on?'Recording 0:00 · tap to stop':'Tap to record')+'</span>'+
+        (on?'':'<button type="button" class="danger" id="pc'+i+'">Cancel</button>')+'</div>';
+    }else if(R.mode==='take'){
+      h+='<span class="hint" style="text-align:left">Listen back, then save</span>'+playerHtml('pq'+i,null)+
+        '<div class="bar"><button type="button" class="primary" id="pk'+i+'">Save</button><button type="button" id="pa'+i+'">Record again</button><button type="button" class="danger" id="pd'+i+'">Discard</button></div>';
+    }
+    body.innerHTML=h;
+    if($('pp'+i)){makePlayer($('pp'+i)).load(useAuto?R.auto:R.own)}
+    if($('co'+i)){$('co'+i).onclick=()=>{setPlays(s.id,'own');draw()};$('ca'+i).onclick=()=>{setPlays(s.id,'auto');draw()}}
+    if($('px'+i))$('px'+i).onclick=()=>{R.mode='confirm';draw()};
+    if($('pxn'+i))$('pxn'+i).onclick=()=>{R.mode='view';draw()};
+    if($('pxy'+i))$('pxy'+i).onclick=async()=>{$('pxy'+i).disabled=true;msg('Deleting…');await removeFile(voicePath(s.id));await del('voice:'+s.id);setPlays(s.id,'own');R.mode='view';await load();msg('');draw()};
+    if($('pr'+i))$('pr'+i).onclick=()=>{if(rec){msg('Finish the other recording first');return}R.mode='rec';msg('');draw()};
+    if($('pc'+i))$('pc'+i).onclick=()=>{R.mode='view';msg('');draw()};
+    if($('pm'+i))$('pm'+i).onclick=()=>R.mode==='recording'?(rec&&rec.r.stop()):startRec();
+    if($('pq'+i)&&R.take)makePlayer($('pq'+i)).load(R.take.url);
+    if($('pk'+i))$('pk'+i).onclick=async()=>{$('pk'+i).disabled=true;stop();
+      const ok=await saveVoice(s.id,R.take.blob,$('ps'+i),()=>{});
+      if(ok){URL.revokeObjectURL(R.take.url);R.take=null;setPlays(s.id,'own');R.mode='view';await load();msg('Saved');draw()}else if($('pk'+i))$('pk'+i).disabled=false};
+    if($('pa'+i))$('pa'+i).onclick=()=>{dropTake();R.mode='rec';draw();startRec()};
+    if($('pd'+i))$('pd'+i).onclick=()=>{dropTake();R.mode='view';msg('');draw()};
+  };
+  const dropTake=()=>{if(R.take){URL.revokeObjectURL(R.take.url);R.take=null}};
+  const startRec=async()=>{if(rec){msg('Finish the other recording first');return}stop();obPlayers.forEach(x=>x.stop());msg('');
+    let stream;try{stream=await getMic(false)}catch(e){msg('The microphone isn’t available. Check the browser allowed it.');return}
+    let r;try{r=newRecorder(stream)}catch(e){stream.getTracks().forEach(t=>t.stop());msg('This device can’t record here.');return}
+    const chunks=[],t0=Date.now();r.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+    const tick=setInterval(()=>{if($('pt'+i))$('pt'+i).textContent='Recording '+fmt((Date.now()-t0)/1000)+' · tap to stop'},250);
+    r.onstop=()=>{clearInterval(tick);stream.getTracks().forEach(t=>t.stop());rec=null;if(!$('pbody'+i))return;
+      const blob=new Blob(chunks,{type:(r.mimeType||'audio/webm').split(';')[0]});
+      if(!blob.size){R.mode='rec';draw();msg('Nothing was recorded. Try again.');return}
+      R.take={blob,url:URL.createObjectURL(blob)};R.mode='take';draw()};
+    rec={i,r};r.start();R.mode='recording';draw()};
+  load().then(draw);
 }
 
 async function showSpot(s){
@@ -573,7 +644,23 @@ Soon we’ll be there, and we can explore somewhere new.
 
 Well done, Max. You were brave today, and I’m very proud of you.
 
-Shall we go on another adventure tomorrow?`;
+Shall we go on another adventure tomorrow?
+
+Today we’re going to the big shop. It’s called Costco, and it’s very, very big!
+
+The trolleys are huge. Max helps to push ours, slowly and carefully.
+
+Look up! The shelves go all the way to the ceiling. There are boxes of cereal, piles of fruit, and big bags of pasta.
+
+Can you hear the beeping? That’s the tills. Each beep means something has been scanned. It’s a normal sound.
+
+Some people are talking, and someone is laughing. If it feels too noisy, we can stop, put on our headphones, and have a little rest.
+
+Oh, I can smell something yummy. That’s the food court. Should we have a snack before we go home?
+
+Max chooses a drink and sits down at a table. He did so well today.
+
+What was your favourite part? Was it the trolleys, the beeping tills, or the snack at the end?`;
 const fmt=t=>{t=Math.max(0,Math.floor(t||0));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 const PLAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#fff"/></svg>';
 const PAUSE_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="#fff"/><rect x="14" y="5" width="4" height="14" rx="1" fill="#fff"/></svg>';
@@ -590,6 +677,7 @@ function makePlayer(el){
       a.ontimeupdate=()=>{if(!a)return;const d=a.duration;if(d&&isFinite(d)){bar.style.width=(a.currentTime/d*100)+'%';tm.textContent=fmt(a.currentTime)+' / '+fmt(d)}else tm.textContent=fmt(a.currentTime)};
       a.onended=()=>{icon(false);bar.style.width='100%';a=null}}
     a.play().then(()=>icon(true)).catch(()=>{})};
+  api.el=el;for(let k=obPlayers.length-1;k>=0;k--)if(obPlayers[k].el&&!document.body.contains(obPlayers[k].el))obPlayers.splice(k,1);
   obPlayers.push(api);return api}
 const reviewPlayer=makePlayer($('obPlayer')),samplePlayer=makePlayer($('obSample'));
 
@@ -618,29 +706,29 @@ function resetRecorder(){recCancel();reviewPlayer.stop();obBlob=null;if(obUrl){U
 $('obMic').onclick=async()=>{
   stop();$('obRecMsg').textContent='';
   let stream;
-  try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}
+  try{stream=await getMic(true)}
   catch(e){$('obRecMsg').textContent='The microphone isn’t available. Check the browser allowed it, then try again.';return}
-  let r;try{r=new MediaRecorder(stream)}catch(e){stream.getTracks().forEach(t=>t.stop());$('obRecMsg').textContent='This phone can’t record here.';return}
+  let r;try{r=newRecorder(stream)}catch(e){stream.getTracks().forEach(t=>t.stop());$('obRecMsg').textContent='This phone can’t record here.';return}
   const chunks=[];r.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
   let ctx2=null,an=null,raf=0;
   try{ctx2=new (window.AudioContext||window.webkitAudioContext)();an=ctx2.createAnalyser();an.fftSize=512;ctx2.createMediaStreamSource(stream).connect(an)}catch(e){an=null}
   const cv=$('obWave'),cx=cv.getContext('2d'),bars=[],buf=an?new Uint8Array(an.fftSize):null;
   const col=getComputedStyle(document.documentElement).getPropertyValue('--danger').trim()||'#c0392b';
   const t0=Date.now();let last=0;
-  const tick=()=>{const sec=(Date.now()-t0)/1000;$('obTime').textContent=fmt(sec);$('obBar').style.width=Math.min(100,sec/60*100)+'%';
+  const tick=()=>{const sec=(Date.now()-t0)/1000;$('obTime').textContent=fmt(sec);$('obBar').style.width=Math.min(100,sec/120*100)+'%';
     if(an&&Date.now()-last>60){last=Date.now();an.getByteTimeDomainData(buf);let m=0;for(let k=0;k<buf.length;k++)m=Math.max(m,Math.abs(buf[k]-128));
       bars.push(m/128);if(bars.length>48)bars.shift();cx.clearRect(0,0,cv.width,cv.height);cx.fillStyle=col;const w=cv.width/48;
       bars.forEach((v,k)=>{const h=Math.min(cv.height,Math.max(6,v*cv.height*1.8));cx.fillRect(k*w+3,(cv.height-h)/2,w-6,h)})}
-    if(sec>=180){if(obRec)obRec.r.stop();return} // stop automatically at 3 minutes
+    if(sec>=240){if(obRec)obRec.r.stop();return} // stop automatically at 4 minutes
     raf=requestAnimationFrame(tick)};
   r.onstop=()=>{cancelAnimationFrame(raf);stream.getTracks().forEach(t=>t.stop());if(ctx2)ctx2.close().catch(()=>{});
     const me=obRec;obRec=null;if(me&&me.cancelled)return;
     const sec=(Date.now()-t0)/1000,blob=new Blob(chunks,{type:(r.mimeType||'audio/webm').split(';')[0]});
     $('obRecording').hidden=true;
     if(!blob.size||sec<15){$('obIdle').hidden=false;$('obRecTitle').textContent='Read this out loud';
-      $('obRecMsg').textContent=blob.size?'That was a bit short. Try reading the whole passage, about a minute.':'Nothing was recorded. Please try again.';return}
+      $('obRecMsg').textContent=blob.size?'That was a bit short. Try reading the whole passage, about two minutes.':'Nothing was recorded. Please try again.';return}
     obBlob=blob;obUrl=URL.createObjectURL(blob);reviewPlayer.load(obUrl);$('obReview').hidden=false;$('obRecTitle').textContent='Listen back';
-    $('obRecMsg').textContent=sec<30?'That was quite short. A longer recording usually sounds more like you.':''};
+    $('obRecMsg').textContent=sec<60?'That was quite short. A longer recording, about two minutes, usually sounds more like you.':''};
   obRec={r};r.start();$('obIdle').hidden=true;$('obRecording').hidden=false;$('obRecTitle').textContent='Recording…';
   cx.clearRect(0,0,cv.width,cv.height);tick()};
 $('obStop').onclick=()=>{if(obRec)obRec.r.stop()};

@@ -50,11 +50,16 @@ async function elevenLabsError(r) {
   return new HttpsError("internal", "ElevenLabs couldn't do that just now. Please try again.");
 }
 
+// How the voice is spoken. similarity_boost: how closely it sticks to the parent's voice (default 0.75).
+// stability: steadier, less dramatic reading (default 0.5). Changing these makes every voiceover again (see SETTINGS_VERSION).
+const VOICE_SETTINGS = { stability: 0.55, similarity_boost: 0.9, style: 0, use_speaker_boost: true };
+const SETTINGS_VERSION = "2";
+
 async function textToSpeech(key, voiceId, text) {
   const r = await fetch(`${API}/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: "POST",
     headers: { "xi-api-key": key, "Content-Type": "application/json", Accept: "audio/mpeg" },
-    body: JSON.stringify({ text, model_id: MODEL }),
+    body: JSON.stringify({ text, model_id: MODEL, voice_settings: VOICE_SETTINGS }),
   });
   if (!r.ok) throw await elevenLabsError(r);
   return Buffer.from(await r.arrayBuffer());
@@ -171,5 +176,5 @@ exports.deleteVoice = onCall({ secrets: [ELEVENLABS_API_KEY], timeoutSeconds: 60
 });
 
 function hash(text) {
-  return crypto.createHash("sha256").update(text.trim()).digest("hex").slice(0, 16);
+  return crypto.createHash("sha256").update(SETTINGS_VERSION + "|" + text.trim()).digest("hex").slice(0, 16);
 }

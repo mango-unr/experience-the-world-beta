@@ -51,6 +51,7 @@ textarea{min-height:70px;resize:vertical}
 .home p{margin:0;font-size:1.25rem;line-height:1.6;max-width:30ch}
 .home button{font-size:1.3rem;padding:16px 48px;min-height:60px}
 button.danger{background:var(--danger);color:var(--danger-fg);border-color:var(--danger)}
+button.remove{color:var(--danger);border-color:var(--danger);background:transparent}
 .picview{position:fixed;inset:0;z-index:30;background:rgba(10,20,20,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
   padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .picview img{max-width:100%;max-height:calc(100% - 90px);border-radius:16px;object-fit:contain}
@@ -280,7 +281,7 @@ $('entryBack').onclick=showMenu;$('sceneBack').onclick=showMenu;
 
 $('shareBtn').onclick=()=>{
   const txt=JSON.stringify({adventure:cur.id,hotspots:spots.map(({id,title,text,yaw,pitch,picLabel})=>({id,title,text,yaw,pitch,picLabel}))},null,1);
-  const show=msg=>{$('panel').innerHTML='<h2>Share hotspots with Claude</h2><p>'+msg+'</p><textarea id="shareBox" readonly style="min-height:160px"></textarea><div class="bar"><button type="button" id="shareClose">Close</button></div>';
+  const show=msg=>{$('panel').innerHTML='<h2>Share hotspots with Claude</h2><p>'+msg+'</p><textarea id="shareBox" readonly style="min-height:160px"></textarea><div class="bar"><button type="button" class="danger" id="shareClose">Close</button></div>';
     $('panel').hidden=false;$('shareBox').value=txt;$('shareClose').onclick=closePanel;return $('shareBox')};
   const fallback=()=>{const b=show('Press and hold the text below, choose Select all, then Copy, and paste it into the chat with Claude.');b.focus();b.select()};
   try{navigator.clipboard.writeText(txt).then(()=>show('Copied. Paste it into the chat with Claude.'),fallback)}catch(e){fallback()}};
@@ -299,7 +300,7 @@ function closePanel(){if(rec){try{rec.r.stop()}catch(e){}}stop();Object.keys(tak
 // In-app recording (needs microphone access; the Claude app blocks it, a normal website allows it)
 let rec=null;const takes={}; // unsaved new recordings, by row
 // Show or hide the Listen / Save / Discard buttons for a new, unsaved recording
-function showTake(i,on){['pl','pk','pd'].forEach(k=>$(k+i).hidden=!on);['pv','pp','px'].forEach(k=>{const el=$(k+i);(k==='pv'?el.parentElement:el).hidden=on})}
+function showTake(i,on){const rb=$('pr'+i);rb.classList.remove('danger');rb.classList.toggle('primary',!on);['pl','pk','pd'].forEach(k=>$(k+i).hidden=!on);['pv','pp','px'].forEach(k=>{const el=$(k+i);(k==='pv'?el.parentElement:el).hidden=on})}
 async function toggleRec(i,id,refresh){
   const btn=$('pr'+i),st0=$('ps'+i);
   if(rec&&rec.i===i){rec.r.stop();return}
@@ -312,11 +313,11 @@ async function toggleRec(i,id,refresh){
   try{r=new MediaRecorder(stream)}catch(e){stream.getTracks().forEach(t=>t.stop());st0.textContent='This phone can’t record here.';return}
   const t0=Date.now();const tick=setInterval(()=>{st0.textContent='Recording… '+Math.floor((Date.now()-t0)/1000)+'s'},250);
   r.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
-  r.onstop=()=>{clearInterval(tick);stream.getTracks().forEach(t=>t.stop());rec=null;if(!document.body.contains(btn))return;btn.textContent='Record again';
+  r.onstop=()=>{clearInterval(tick);stream.getTracks().forEach(t=>t.stop());rec=null;if(!document.body.contains(btn))return;btn.classList.remove('danger');btn.textContent='Record again';
     const blob=new Blob(chunks,{type:(r.mimeType||'audio/webm').split(';')[0]});
-    if(!blob.size){st0.textContent='Nothing was recorded. Try again.';return}
+    if(!blob.size){btn.classList.add('primary');st0.textContent='Nothing was recorded. Try again.';return}
     takes[i]={blob,url:URL.createObjectURL(blob)};showTake(i,true);st0.textContent='New recording, not saved yet'};
-  rec={i,r};r.start();btn.textContent='Stop';st0.textContent='Recording… 0s';
+  rec={i,r};r.start();btn.textContent='Stop';btn.classList.remove('primary');btn.classList.add('danger');st0.textContent='Recording… 0s';
 }
 function clearTake(i){if(takes[i]){URL.revokeObjectURL(takes[i].url);delete takes[i]}if($('pl'+i))showTake(i,false)}
 // Upload a parent's recording to their family's private folder
@@ -336,7 +337,7 @@ async function openParent(){
     spots.map((s,i)=>'<div class="line"><h3>'+esc(s.title)+'</h3><p>'+esc(s.text)+'</p><div class="bar">'+
       '<button type="button" class="primary" id="pr'+i+'">Record</button>'+
       '<label class="filebtn" for="pv'+i+'">Add a file<input class="vh" type="file" id="pv'+i+'" accept="audio/*"></label>'+
-      '<button type="button" id="pp'+i+'">Play</button><button type="button" id="px'+i+'">Remove</button>'+
+      '<button type="button" id="pp'+i+'">Play</button><button type="button" class="remove" id="px'+i+'">Remove</button>'+
       '<button type="button" id="pl'+i+'" hidden>Listen</button><button type="button" class="primary" id="pk'+i+'" hidden>Save</button><button type="button" class="danger" id="pd'+i+'" hidden>Discard</button>'+
       '<span class="state" id="ps'+i+'"></span></div></div>').join('')+
     '<div class="bar" id="ctl" hidden><button type="button" id="cPlay">Pause</button><button type="button" id="cReplay">Replay</button></div>';
@@ -378,10 +379,10 @@ function editSpot(s,pos){
   $('panel').innerHTML='<h2>'+(isNew?'New hotspot':'Change hotspot')+'</h2>'+
     '<label for="fTitle">Name<input type="text" id="fTitle" value="'+esc(d.title)+'"></label>'+
     '<label for="fText">What it says<textarea id="fText">'+esc(d.text)+'</textarea></label>'+
-    '<div class="bar"><label class="filebtn" for="fSoundIn">Add a sound<input class="vh" type="file" id="fSoundIn" accept="audio/*"></label><button type="button" id="fSoundX">Remove</button><span class="state" id="sSound"></span></div>'+
-    '<div class="bar"><label class="filebtn" for="fPicIn">Add a picture<input class="vh" type="file" id="fPicIn" accept="image/*"></label><button type="button" id="fPicX">Remove</button><span class="state" id="sPic"></span></div>'+
+    '<div class="bar"><label class="filebtn" for="fSoundIn">Add a sound<input class="vh" type="file" id="fSoundIn" accept="audio/*"></label><button type="button" class="remove" id="fSoundX">Remove</button><span class="state" id="sSound"></span></div>'+
+    '<div class="bar"><label class="filebtn" for="fPicIn">Add a picture<input class="vh" type="file" id="fPicIn" accept="image/*"></label><button type="button" class="remove" id="fPicX">Remove</button><span class="state" id="sPic"></span></div>'+
     '<label for="fPicLabel">Picture button name<input type="text" id="fPicLabel" value="'+esc(d.picLabel||(PICTURES[d.id]&&PICTURES[d.id].label)||'')+'" placeholder="See the picture"></label>'+
-    '<div class="bar"><button type="button" class="primary" id="fSave">Save</button>'+(isNew?'':'<button type="button" id="fDel">Delete</button>')+'<button type="button" class="danger" id="fCancel">Cancel</button></div>'+
+    '<div class="bar"><button type="button" class="primary" id="fSave">Save</button>'+(isNew?'':'<button type="button" class="remove" id="fDel">Delete</button>')+'<button type="button" class="danger" id="fCancel">Cancel</button></div>'+
     '<span class="state" id="fMsg"></span>';
   $('panel').hidden=false;
   const refresh=()=>{$('sSound').textContent=d.soundUrl?'Added':(BUILT_SOUNDS[d.id]?'Built-in sound':'None yet');

@@ -87,6 +87,7 @@ button.remove{color:var(--danger);border-color:var(--danger);background:transpar
 .recbtn.sm svg{width:28px;height:28px}
 .xbtn{width:44px;height:44px;min-height:44px;border-radius:50%;padding:0;justify-content:center;flex:none;color:var(--danger);border:2px solid var(--danger);background:transparent;font-size:1.3rem;line-height:1}
 .vrow .player{padding-right:6px}
+.cslot{display:flex;flex-direction:column;gap:6px;visibility:hidden}.cslot .hint{min-height:1.4em}.cslot.on{visibility:visible}
 .player{display:flex;align-items:center;gap:12px;background:var(--surface);border:2px solid var(--line);border-radius:999px;padding:6px 14px 6px 6px;width:100%}
 .player .pp{width:44px;height:44px;min-height:44px;border-radius:50%;padding:0;justify-content:center;background:var(--btn);border-color:var(--btn);flex:none}
 .player .pp svg{width:20px;height:20px}
@@ -352,14 +353,19 @@ const SOUND_LIMIT=10; // seconds: sounds stop after this; the parent's voice pla
 const FADE=2; // seconds of fade-out before the limit
 const toUrl=b=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=()=>r(null);fr.readAsDataURL(b)});
 function stop(){if(player){player.pause();player=null}syncCtl()}
-function syncCtl(){const c=$('ctl');if(!c)return;c.hidden=!player;const pp=$('cPlay');if(pp&&player)pp.textContent=player.paused?'Play':'Pause'}
+function syncCtl(){const c=$('ctl');if(c){c.hidden=!player;const pp=$('cPlay');if(pp&&player)pp.textContent=player.paused?'Play':'Pause'}
+  const b=$('cPP');if(b&&player){const on=!player.paused;b.innerHTML=on?PAUSE_SVG:PLAY_SVG;b.setAttribute('aria-label',on?'Pause':'Play')}slotTime()}
+// Bar and time for the child's player. Sounds stop at the 10-second limit, so the bar fills to that point.
+function slotTime(){const bar=$('cBar');if(!bar||!player)return;const d=player.duration;let tot=isFinite(d)&&d>0?d:0;if(limit)tot=tot?Math.min(tot,limit):limit;
+  const t=Math.min(player.currentTime,tot||player.currentTime);bar.style.width=tot?Math.min(100,t/tot*100)+'%':'0';
+  $('cTime').textContent=fmt(t)+(tot?' / '+fmt(tot):'')}
 async function play(key){stop();let url=null;const id=key.slice(6);
   if(key.startsWith('voice:'))url=await voiceUrl(id);
   else if(key.startsWith('sound:')){const h=spots.find(x=>x.id===id);url=(h&&h.soundUrl)||BUILT_SOUNDS[id]||null}
   if(!url)return;playUrl(url,key.startsWith('sound:'))}
 function playUrl(url,isSound){stop();
   const a=new Audio(url);player=a;a.muted=muted;limit=isSound?SOUND_LIMIT:0;
-  a.addEventListener('timeupdate',()=>{if(limit&&a.currentTime>=limit){a.pause();syncCtl()}});
+  a.addEventListener('timeupdate',()=>{if(limit&&a.currentTime>=limit){a.pause();syncCtl()}if(player===a)slotTime()});a.addEventListener('loadedmetadata',()=>{if(player===a)slotTime()});
   const fade=()=>{if(player!==a)return;if(limit){const left=limit-a.currentTime;a.volume=Math.max(0,Math.min(1,left/FADE));if(left<=0&&!a.paused){a.pause()}}if(!a.paused)requestAnimationFrame(fade)};
   a.addEventListener('play',()=>requestAnimationFrame(fade));
   a.addEventListener('ended',syncCtl);a.addEventListener('pause',syncCtl);a.addEventListener('play',syncCtl);
@@ -586,12 +592,17 @@ async function showSpot(s){
     '<button type="button" class="primary" id="pVoice"'+(hasVoice?'':' disabled')+'>Parent reads it</button>'+
     (hasSound?'<button type="button" class="primary" id="pSound">Hear the sound</button>':'')+
     (pic?'<button type="button" class="primary" id="pPic">'+esc(pic.label)+'</button>':'')+
-    '<button type="button" class="danger" id="pClose">Close</button></div>'+
-    '<div class="bar" id="ctl" hidden><button type="button" id="cPlay">Pause</button><button type="button" id="cReplay">Replay</button></div>'+
-    (hasVoice?'':'<span class="state">No parent recording yet.</span>');
+    '</div>'+
+    // the player's space is always there, so nothing moves when it appears
+    '<div class="cslot" id="cslot" aria-hidden="true"><span class="hint" style="text-align:left" id="cLabel"></span>'+
+    '<div class="player"><button type="button" class="pp" id="cPP" aria-label="Pause">'+PAUSE_SVG+'</button><div class="pbar"><i id="cBar"></i></div><span class="ptime" id="cTime"></span></div></div>'+
+    (hasVoice?'':'<span class="state">No parent recording yet.</span>')+
+    '<div class="bar"><button type="button" class="danger" id="pClose">Close</button></div>';
   $('panel').hidden=false;
-  $('pVoice').onclick=()=>play('voice:'+s.id);if(hasSound)$('pSound').onclick=()=>play('sound:'+s.id);
-  if(pic)$('pPic').onclick=()=>{$('picImg').src=pic.src;$('picImg').alt=pic.alt||'';$('picview').hidden=false;$('picClose').focus()};$('pClose').onclick=closePanel;$('cPlay').onclick=togglePlay;$('cReplay').onclick=replay;
+  const slot=label=>{$('cLabel').textContent='Playing: '+label;$('cBar').style.width='0';$('cTime').textContent='';$('cslot').classList.add('on');$('cslot').removeAttribute('aria-hidden')};
+  $('pVoice').onclick=()=>{slot('Parent reads it');play('voice:'+s.id)};if(hasSound)$('pSound').onclick=()=>{slot('Hear the sound');play('sound:'+s.id)};
+  $('cPP').onclick=togglePlay;
+  if(pic)$('pPic').onclick=()=>{$('picImg').src=pic.src;$('picImg').alt=pic.alt||'';$('picview').hidden=false;$('picClose').focus()};$('pClose').onclick=closePanel;
 }
 
 // Admin: edit a hotspot. Changes are saved to the shared database, so every family sees them.

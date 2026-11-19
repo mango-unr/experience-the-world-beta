@@ -26,7 +26,8 @@ setGlobalOptions({ region: "europe-west2", maxInstances: 5 });
 
 const ELEVENLABS_API_KEY = defineSecret("ELEVENLABS_API_KEY");
 const API = "https://api.elevenlabs.io/v1";
-const MODEL = "eleven_multilingual_v2";
+const MODEL = "eleven_v4"; // newest model; if it refuses a request we fall back to the older one
+const FALLBACK_MODEL = "eleven_multilingual_v2";
 const SAMPLE_LINE = "Hello! Shall we go on an adventure together?";
 
 // Limits, so a single call can't run up a large ElevenLabs bill
@@ -52,15 +53,26 @@ async function elevenLabsError(r) {
 
 // How the voice is spoken. similarity_boost: how closely it sticks to the parent's voice (default 0.75).
 // stability: steadier, less dramatic reading (default 0.5). Changing these makes every voiceover again (see SETTINGS_VERSION).
-const VOICE_SETTINGS = { stability: 0.55, similarity_boost: 0.9, style: 0, use_speaker_boost: true };
-const SETTINGS_VERSION = "2";
+// v4 only has stability and similarity (no style or speaker boost). Very high similarity can sound less natural.
+const VOICE_SETTINGS = { stability: 0.55, similarity_boost: 0.85 };
+const FALLBACK_SETTINGS = { stability: 0.55, similarity_boost: 0.9, style: 0, use_speaker_boost: true };
+const SETTINGS_VERSION = "3";
 
-async function textToSpeech(key, voiceId, text) {
-  const r = await fetch(`${API}/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+async function speak(key, voiceId, text, model, settings) {
+  return fetch(`${API}/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: "POST",
     headers: { "xi-api-key": key, "Content-Type": "application/json", Accept: "audio/mpeg" },
-    body: JSON.stringify({ text, model_id: MODEL, voice_settings: VOICE_SETTINGS }),
+    body: JSON.stringify({ text, model_id: model, voice_settings: settings }),
   });
+}
+
+async function textToSpeech(key, voiceId, text) {
+  let r = await speak(key, voiceId, text, MODEL, VOICE_SETTINGS);
+  if (!r.ok && r.status >= 400 && r.status < 500 && r.status !== 401 && r.status !== 429) {
+    // the newer model turned the request down (for example not available on this plan): use the older one
+    logger.warn("Falling back to the older voice model", { status: r.status, detail: (await r.text().catch(() => "")).slice(0, 200) });
+    r = await speak(key, voiceId, text, FALLBACK_MODEL, FALLBACK_SETTINGS);
+  }
   if (!r.ok) throw await elevenLabsError(r);
   return Buffer.from(await r.arrayBuffer());
 }

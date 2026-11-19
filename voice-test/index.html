@@ -73,7 +73,7 @@ button.remove{color:var(--danger);border-color:var(--danger);background:transpar
 .timer{font-family:var(--display);font-weight:600;font-size:1.3rem;font-variant-numeric:tabular-nums}
 .pbar{height:8px;border-radius:4px;background:var(--line);width:100%;overflow:hidden}.pbar i{display:block;height:100%;width:0;background:var(--btn);border-radius:4px}
 .hint{font-size:.85rem;color:var(--muted);text-align:center}
-#obWave{width:100%;max-width:320px;height:40px}
+#obWave{width:100%;max-width:320px;height:64px}
 .vrow{border:2px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
 .vhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .vhead h3{margin:0;font-family:var(--display);font-weight:600;font-size:1.15rem}
@@ -87,6 +87,9 @@ button.remove{color:var(--danger);border-color:var(--danger);background:transpar
 .recbtn.sm svg{width:28px;height:28px}
 .xbtn{width:44px;height:44px;min-height:44px;border-radius:50%;padding:0;justify-content:center;flex:none;color:var(--danger);border:2px solid var(--danger);background:transparent;font-size:1.3rem;line-height:1}
 .vrow .player{padding-right:6px}
+.mbar{position:relative;width:100%}.mtick{position:absolute;top:-5px;width:2px;height:18px;background:var(--muted)}
+#obBar.short{background:var(--danger)}
+.mlabels{position:relative;width:100%;height:2.6em;font-size:.8rem;color:var(--muted);line-height:1.25}.mlabels span{position:absolute;top:2px}
 .cslot{display:flex;flex-direction:column;gap:6px;visibility:hidden}.cslot .hint{min-height:1.4em}.cslot.on{visibility:visible}
 .player{display:flex;align-items:center;gap:12px;background:var(--surface);border:2px solid var(--line);border-radius:999px;padding:6px 14px 6px 6px;width:100%}
 .player .pp{width:44px;height:44px;min-height:44px;border-radius:50%;padding:0;justify-content:center;background:var(--btn);border-color:var(--btn);flex:none}
@@ -170,8 +173,11 @@ button.back svg{width:26px;height:26px}
         <button type="button" class="linkbtn" id="obBack3">Back</button>
       </div>
       <div id="obRecording" class="obbot" style="border:0;padding:0;flex:none;width:100%" hidden>
-        <canvas id="obWave" width="640" height="80" aria-hidden="true"></canvas>
-        <div class="timer" id="obTime">0:00</div><div class="pbar"><i id="obBar"></i></div><div class="hint">Aim for about 2:00</div>
+        <canvas id="obWave" width="640" height="128" aria-hidden="true"></canvas>
+        <div class="timer" id="obTime">0:00</div>
+        <div class="mbar"><div class="pbar"><i id="obBar"></i></div><span class="mtick" style="left:25%"></span></div>
+        <div class="mlabels"><span style="left:25%;transform:translateX(-50%)">Min<br>0:30</span><span style="right:0;text-align:right">Best<br>2:00</span></div>
+        <div class="hint" id="obStage">Keep reading. At least 30 seconds is needed.</div>
         <button type="button" class="recbtn" id="obStop" aria-label="Stop recording"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="#fff"/></svg></button><div class="hint">Tap to stop</div>
       </div>
       <div id="obReview" class="obbot" style="border:0;padding:0;flex:none;width:100%" hidden>
@@ -722,24 +728,28 @@ $('obMic').onclick=async()=>{
   let r;try{r=newRecorder(stream)}catch(e){stream.getTracks().forEach(t=>t.stop());$('obRecMsg').textContent='This phone can’t record here.';return}
   const chunks=[];r.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
   let ctx2=null,an=null,raf=0;
-  try{ctx2=new (window.AudioContext||window.webkitAudioContext)();an=ctx2.createAnalyser();an.fftSize=512;ctx2.createMediaStreamSource(stream).connect(an)}catch(e){an=null}
+  try{ctx2=new (window.AudioContext||window.webkitAudioContext)();if(ctx2.resume)ctx2.resume().catch(()=>{});an=ctx2.createAnalyser();an.fftSize=1024;ctx2.createMediaStreamSource(stream).connect(an)}catch(e){an=null}
+  let peak=0.05; // loudest recent level; bars are drawn against it so quiet microphones still show movement
   const cv=$('obWave'),cx=cv.getContext('2d'),bars=[],buf=an?new Uint8Array(an.fftSize):null;
   const col=getComputedStyle(document.documentElement).getPropertyValue('--danger').trim()||'#c0392b';
   const t0=Date.now();let last=0;
   const tick=()=>{const sec=(Date.now()-t0)/1000;$('obTime').textContent=fmt(sec);$('obBar').style.width=Math.min(100,sec/120*100)+'%';
-    if(an&&Date.now()-last>60){last=Date.now();an.getByteTimeDomainData(buf);let m=0;for(let k=0;k<buf.length;k++)m=Math.max(m,Math.abs(buf[k]-128));
-      bars.push(m/128);if(bars.length>48)bars.shift();cx.clearRect(0,0,cv.width,cv.height);cx.fillStyle=col;const w=cv.width/48;
-      bars.forEach((v,k)=>{const h=Math.min(cv.height,Math.max(6,v*cv.height*1.8));cx.fillRect(k*w+3,(cv.height-h)/2,w-6,h)})}
+    $('obBar').classList.toggle('short',sec<30);
+    $('obStage').textContent=sec<30?'Keep reading. At least 30 seconds is needed.':sec<120?'That’s enough to stop. Keep going for the best result.':'Perfect. You can stop now.';
+    if(an&&Date.now()-last>60){last=Date.now();an.getByteTimeDomainData(buf);let sq=0;for(let k=0;k<buf.length;k++){const v=(buf[k]-128)/128;sq+=v*v}
+      const lvl=Math.sqrt(sq/buf.length);peak=Math.max(lvl,peak*0.995,0.02);
+      bars.push(Math.min(1,lvl/peak));if(bars.length>48)bars.shift();cx.clearRect(0,0,cv.width,cv.height);cx.fillStyle=col;const w=cv.width/48;
+      bars.forEach((v,k)=>{const h=Math.min(cv.height,Math.max(4,v*cv.height));cx.fillRect(k*w+3,(cv.height-h)/2,w-6,h)})}
     if(sec>=240){if(obRec)obRec.r.stop();return} // stop automatically at 4 minutes
     raf=requestAnimationFrame(tick)};
   r.onstop=()=>{cancelAnimationFrame(raf);stream.getTracks().forEach(t=>t.stop());if(ctx2)ctx2.close().catch(()=>{});
     const me=obRec;obRec=null;if(me&&me.cancelled)return;
     const sec=(Date.now()-t0)/1000,blob=new Blob(chunks,{type:(r.mimeType||'audio/webm').split(';')[0]});
     $('obRecording').hidden=true;
-    if(!blob.size||sec<15){$('obIdle').hidden=false;$('obRecTitle').textContent='Read this out loud';
-      $('obRecMsg').textContent=blob.size?'That was a bit short. Try reading the whole passage, about two minutes.':'Nothing was recorded. Please try again.';return}
+    if(!blob.size||sec<30){$('obIdle').hidden=false;$('obRecTitle').textContent='Read this out loud';
+      $('obRecMsg').textContent=blob.size?'That was under 30 seconds. Please record again and read for at least 30 seconds, or about 2 minutes for the best result.':'Nothing was recorded. Please try again.';return}
     obBlob=blob;obUrl=URL.createObjectURL(blob);reviewPlayer.load(obUrl);$('obReview').hidden=false;$('obRecTitle').textContent='Listen back';
-    $('obRecMsg').textContent=sec<60?'That was quite short. A longer recording, about two minutes, usually sounds more like you.':''};
+    $('obRecMsg').textContent=''};
   obRec={r};r.start();$('obIdle').hidden=true;$('obRecording').hidden=false;$('obRecTitle').textContent='Recording…';
   cx.clearRect(0,0,cv.width,cv.height);tick()};
 $('obStop').onclick=()=>{if(obRec)obRec.r.stop()};

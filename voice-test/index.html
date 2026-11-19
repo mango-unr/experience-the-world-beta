@@ -159,8 +159,9 @@ button.back svg{width:26px;height:26px}
   <div class="obv" id="ob2" hidden>
     <h1>Read this out loud</h1>
     <p>On the next page there’s a short passage to read. It takes about two minutes.</p>
+    <div class="obcard" id="obLaptop" hidden style="border-color:var(--btn)"><b style="font-family:var(--display);font-weight:600;font-size:1.1rem">For the best voice, use your phone</b><p style="margin:0">It looks like you’re on a laptop or computer. A phone’s microphone gives a much more natural voice. You can still carry on here if you prefer.</p></div>
     <div class="obcard"><b style="font-family:var(--display);font-weight:600;font-size:1.1rem">Before you begin</b>
-      <ul><li>Find a quiet room and turn off the TV or music</li><li>Use your phone if you can. Its microphone usually sounds better than a laptop’s</li><li>Hold your phone a couple of inches from your mouth</li><li>Read the way you’d read a story to your child: calm and warm</li><li>Keep the same pace all the way through. If you slip, just carry on</li><li>Scroll gently with one finger as you read</li></ul></div>
+      <ul><li>Find a quiet room and turn off the TV or music</li><li><b>Record on your phone.</b> It gives a much more natural voice than a laptop</li><li>Hold your phone a couple of inches from your mouth</li><li>Read the way you’d read a story to your child: calm and warm</li><li>Keep the same pace all the way through. If you slip, just carry on</li><li>Scroll gently with one finger as you read</li></ul></div>
     <button type="button" class="primary btn-wide" id="obBegin">Begin</button>
     <button type="button" class="linkbtn" id="obBack2">Back</button>
   </div>
@@ -709,6 +710,10 @@ $('obManual').onclick=()=>{markOnboarded();closeOnboarding();if(!cur)$('menuHint
 $('obSkip').onclick=()=>{markOnboarded();closeOnboarding()};
 $('obBack2').onclick=()=>{if(obFrom==='grownups')closeOnboarding();else obShow(1)};
 $('obBegin').onclick=()=>{resetRecorder();obShow(3)};
+// Laptops and computers get a gentle nudge to record on a phone instead (they can still carry on)
+const onPhone=(()=>{const d=navigator.userAgentData;if(d&&typeof d.mobile==='boolean'&&d.mobile)return true;
+  const ua=navigator.userAgent||'';return /Android|iPhone|iPad|iPod|Mobile/i.test(ua)&&!/CrOS/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)})();
+$('obLaptop').hidden=onPhone;
 $('obBack3').onclick=()=>{resetRecorder();obShow(2)};
 $('obBack4').onclick=()=>obShow(3);
 $('obAgree').onchange=()=>{$('obCreate').disabled=!$('obAgree').checked};

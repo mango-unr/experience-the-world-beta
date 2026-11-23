@@ -348,13 +348,19 @@ const ADVENTURES=[
   scenes:[
    {id:'airport-checkin',name:'Check-in',image:'../heathrow-checkin.jpg',
     builtIn:[{"id":"go-next","go":"next","title":"","text":"","yaw":0,"pitch":-8}],
+    pictures:{"smwtirp3r":{src:"../pictures/flight-board.png",label:"Flight info board example",alt:"A departures board listing flights to Munich, Paris, Rome, Dublin and New York, with times and gates"},
+              "smwtiti43":{src:"../pictures/checkin-screen.png",label:"Check in screen",alt:"A check-in screen: scan your passport, choose your seat, print your bag tag, and a Tap to start button"}},
     screens:[{id:'next',icon:'🛂',title:'Security',text:'Next, we go through security. Max puts his bag and coat in a tray, and a grown-up checks them. Then we walk through a special doorway.'}]},
    {id:'airport-departures',name:'Departures',image:'../heathrow-departures.jpg',
     builtIn:[{"id":"go-next","go":"next","title":"","text":"","yaw":-68,"pitch":-3},{"id":"go-prev","go":"prev","title":"","text":"","yaw":126,"pitch":-3}],
+    pictures:{"smwtov7id":{src:"../pictures/gate-sign.png",label:"Boarding gate sign example",alt:"A gate screen: Gate B12, to Munich, Boarding now"},
+              "smwtox28u":{src:"../pictures/duty-free.png",label:"Example duty free shop front",alt:"A drawing of a shop called Travel Treats with bags, bottles, headphones and a laptop in the windows"}},
     screens:[{id:'next',icon:'🚶',title:'The plane',text:'When our gate number shows on the screen, we walk to the plane. Max finds his seat and puts on his seatbelt.'},
              {id:'flight',icon:'✈️',title:'The flight',text:'The plane goes up into the sky. Max looks out of the window at the clouds. After a while, the plane comes down gently and lands in Munich.'}]},
    {id:'airport-baggage',name:'Arrivals and baggage claim',image:'../munich-baggage.jpg',
-    builtIn:[{"id":"go-prev","go":"prev","title":"","text":"","yaw":0,"pitch":-3}]}
+    builtIn:[{"id":"go-prev","go":"prev","title":"","text":"","yaw":0,"pitch":-3}],
+    pictures:{"smwtq2jpb":{src:"../pictures/airport-tv.png",label:"Example airport TV screen",alt:"A screen saying Welcome to Munich, with arrows to the exit, taxis, trains and the information desk"},
+              "smwtq704r":{src:"../pictures/airport-advert.png",label:"Example airport advert",alt:"A made-up advert for HelloHome SIM, phone data for your holiday"}}}
   ]}
 ];
 // Every adventure is a list of places: most have one, the airport has three

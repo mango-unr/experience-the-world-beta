@@ -128,6 +128,24 @@ button.back svg{width:26px;height:26px}
 .line{border-top:2px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:8px}
 .line h3{margin:0;font-family:var(--display);font-weight:600;font-size:1.2rem}
 .line p{font-size:1.05rem}
+.scpill{margin-left:auto;background:rgba(0,0,0,.55);color:#fff;font-size:.85rem;border-radius:999px;padding:5px 11px;font-family:var(--body);white-space:nowrap}
+.hsgo{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.hsgo .c{width:60px;height:60px;border-radius:50%;background:var(--btn);border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+.hsgo .c svg{width:30px;height:30px}
+.hsgo .l{background:rgba(0,0,0,.65);color:#fff;font-family:var(--display);font-weight:600;font-size:.95rem;border-radius:8px;padding:3px 10px;white-space:nowrap}
+.scnav{position:fixed;z-index:5;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:640px;margin:0 auto;display:flex;gap:10px}
+.scnav button{flex:1;justify-content:center;min-height:56px}
+.scnav .prev{background:var(--surface);color:var(--fg);border-color:var(--line)}
+.scnav .spacer{flex:1}
+.trans{position:fixed;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  padding:calc(24px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
+.trans .bg{position:absolute;inset:-40px;background:#444 center/cover no-repeat;filter:blur(16px) brightness(.85)}
+.trans .card{position:relative;background:color-mix(in srgb,var(--surface) 94%,transparent);border-radius:24px;padding:26px 22px;width:min(100%,460px);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+.trans .ico{width:96px;height:96px;border-radius:50%;background:var(--soft-bg);display:flex;align-items:center;justify-content:center;font-size:48px;line-height:1}
+.trans h2{margin:0;font-family:var(--display);font-weight:600;font-size:1.7rem}
+.trans p{margin:0;font-size:1.2rem;line-height:1.6}
+.trans .go{width:100%;justify-content:center;min-height:60px;font-size:1.2rem}
+.trans .back{position:absolute;left:max(16px,env(safe-area-inset-left,0px));top:calc(16px + env(safe-area-inset-top,0px));z-index:1}
 .tag{font-family:var(--display);font-weight:600;background:#e9a23b;color:#3a2604;border-radius:10px;padding:6px 12px}
 </style>
 </head>
@@ -254,10 +272,27 @@ button.back svg{width:26px;height:26px}
     <button type="button" id="grownBtn">Grown-ups</button>
     <button type="button" id="shareBtn" hidden>Share hotspots with Claude</button>
     <button type="button" id="adminSignOut" hidden>Sign out</button>
+    <button type="button" id="editNextBtn" hidden>Edit next screen</button>
+    <span class="scpill" id="scPill" hidden></span>
   </div>
   <div class="note" id="note">Tap a white ring to find out about it.</div>
 </div>
 <div class="panel" id="panel" hidden></div>
+<!-- Moving between photos in an adventure with more than one place (e.g. the airport) -->
+<div class="scnav" id="scnav" hidden><button type="button" class="prev" id="navPrev"></button><span class="spacer" id="navGap" hidden></span><button type="button" class="primary" id="navNext"></button></div>
+<!-- The screen between two places: what happens next, read by the parent -->
+<div class="trans" id="trans" hidden>
+  <div class="bg" id="transBg"></div>
+  <button type="button" class="back" id="transBack" aria-label="Back to this place"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7M8 12h13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <div class="card">
+    <div class="ico" id="transIco" aria-hidden="true"></div>
+    <h2 id="transTitle"></h2>
+    <p id="transText"></p>
+    <div class="player" id="transPlayer"><button type="button" class="pp" aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#fff"/></svg></button><div class="pbar"><i></i></div><span class="ptime">Parent reads it</span></div>
+    <span class="state" id="transNoVoice" hidden>No parent recording yet.</span>
+    <button type="button" class="primary go" id="transGo"></button>
+  </div>
+</div>
 <div class="picview" id="picview" hidden><img id="picImg" alt=""><button type="button" class="danger" id="picClose">Close</button></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js"></script>
@@ -301,8 +336,27 @@ const ADVENTURES=[
   sounds:{"smwb17huz":"../sounds/tube-doors.mp3","smwb21gzh":"../sounds/tube-people.mp3","smwb2kfwb":"../sounds/tube-train.mp3","smwb22mqt":"../sounds/tube-windows.mp3"},
   // pictures: a hotspot's picture extra, shown full screen; label = its button
   pictures:{"smwb2dkiz":{src:"../pictures/tube-map.png",label:"See the map",alt:"A simple train map with seven stops, from King's Cross St Pancras to Green Park"},
-            "smwb2jk0b":{src:"../pictures/tube-advert.png",label:"See the advert",alt:"An advert for Sunny Orange Juice with big oranges"}}}
+            "smwb2jk0b":{src:"../pictures/tube-advert.png",label:"See the advert",alt:"An advert for Sunny Orange Juice with big oranges"}}},
+ // An adventure with several places. Each place keeps its own hotspots (saved under its own id).
+ // next = the screen shown when moving on from that place (admins can change its words).
+ // Hotspots with go:'next' or go:'prev' are the green arrows that move between places.
+ {id:'airport',label:'Max goes to the airport',
+  title:'Come to the airport with Max',
+  text:'Max is flying from London Heathrow to Munich today and would like you to come with him. Tap the button below to join him at the airport.',
+  scenes:[
+   {id:'airport-checkin',name:'Check-in',image:'../heathrow-checkin.jpg',
+    builtIn:[{"id":"go-next","go":"next","title":"","text":"","yaw":0,"pitch":-8}],
+    next:{icon:'🛂',title:'Security',text:'Next, we go through security. Max puts his bag and coat in a tray, and a grown-up checks them. Then we walk through a special doorway.'}},
+   {id:'airport-departures',name:'Departures',image:'../heathrow-departures.jpg',
+    builtIn:[{"id":"go-next","go":"next","title":"","text":"","yaw":-68,"pitch":-3},{"id":"go-prev","go":"prev","title":"","text":"","yaw":126,"pitch":-3}],
+    next:{icon:'✈️',title:'The plane',text:'When our gate number shows on the screen, we walk to the plane. Max finds his seat and puts on his seatbelt. The plane takes off, and soon we land in Munich.'}},
+   {id:'airport-baggage',name:'Baggage claim',image:'../munich-baggage.jpg',
+    builtIn:[{"id":"go-prev","go":"prev","title":"","text":"","yaw":0,"pitch":-3}]}
+  ]}
 ];
+// Every adventure is a list of places: most have one, the airport has three
+const scenesOf=t=>t.scenes||[t];
+let trip=null,sceneIdx=0;
 
 let cur=null,spots=[],BUILT_SOUNDS={},PICTURES={};
 // ---- Cloud (Firebase): fs = database (words, positions), st = storage (files) ----
@@ -310,11 +364,16 @@ let fs=null,st=null;
 // Hotspots: everyone reads them from the shared database (adventures/<id>). If none are saved there yet, the built-in ones are used.
 function loadSpots(a){return JSON.parse(JSON.stringify(a.builtIn))}
 async function fetchSpots(a){if(!fs)return null;try{const d=await fs.collection('adventures').doc(a.id).get();
+  if(d.exists&&d.data().next&&a.next)a.nextSaved=d.data().next;
   if(d.exists&&Array.isArray(d.data().hotspots))return d.data().hotspots}catch(e){}return null}
+// The words for the screen after a place: what an admin saved, or the built-in words
+const nextOf=a=>a&&a.next?Object.assign({},a.next,a.nextSaved||{}):null;
+// The voiceovers a place needs: its hotspots, plus the screen that follows it
+const voiceItems=(a,list)=>{const n=nextOf(a);return (list||[]).concat(n&&n.text?[{id:'next',text:n.text}]:[])};
 // Only admins can save; the database's security rules enforce that, not just this page.
 async function save(){if(!fs||!cur)return false;
-  const clean=spots.map(x=>JSON.parse(JSON.stringify({id:x.id,title:x.title,text:x.text,yaw:x.yaw,pitch:x.pitch,picLabel:x.picLabel,soundUrl:x.soundUrl,soundPath:x.soundPath,picUrl:x.picUrl,picPath:x.picPath})));
-  try{await fs.collection('adventures').doc(cur.id).set({hotspots:clean,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:(auth&&auth.currentUser&&auth.currentUser.email)||''});return true}catch(e){return false}}
+  const clean=spots.map(x=>JSON.parse(JSON.stringify({id:x.id,title:x.title,text:x.text,yaw:x.yaw,pitch:x.pitch,go:x.go,picLabel:x.picLabel,soundUrl:x.soundUrl,soundPath:x.soundPath,picUrl:x.picUrl,picPath:x.picPath})));
+  try{await fs.collection('adventures').doc(cur.id).set({hotspots:clean,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:(auth&&auth.currentUser&&auth.currentUser.email)||''},{merge:true});return true}catch(e){return false}}
 // Files in storage. Each family's recordings live in their own folder: families/<their account id>/voice/<hotspot id>
 const uid=()=>auth&&auth.currentUser?auth.currentUser.uid:null;
 const voicePath=id=>uid()?'families/'+uid()+'/voice/'+id:null;
@@ -431,7 +490,14 @@ function markOnboarded(){if(fs&&uid())fs.collection('families').doc(uid()).set({
 
 // ---- Navigation: adventures page -> entry page -> 360 scene ----
 let viewer=null;
-function cfg(s){return{id:s.id,yaw:s.yaw,pitch:s.pitch,cssClass:'hs',createTooltipFunc:d=>{d.dataset.spot=s.id;d.setAttribute('aria-label',s.title)}}}
+const ARROW_UP='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V5M5 12l7-7 7 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ARROW_DOWN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15M5 12l7 7 7-7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const placeName=i=>{const sc=trip?scenesOf(trip)[i]:null;return sc&&sc.name?sc.name:''};
+function goLabel(s){const i=sceneIdx+(s.go==='next'?1:-1),n=placeName(i).toLowerCase();return n?(s.go==='next'?'To ':'Back to ')+n:''}
+function cfg(s){
+  if(s.go)return{id:s.id,yaw:s.yaw,pitch:s.pitch,cssClass:'hsgo',createTooltipFunc:d=>{d.dataset.spot=s.id;const l=goLabel(s);
+    d.innerHTML='<span class="c">'+(s.go==='next'?ARROW_UP:ARROW_DOWN)+'</span>'+(l?'<span class="l">'+esc(l)+'</span>':'');d.setAttribute('aria-label',l||'Move')}};
+  return{id:s.id,yaw:s.yaw,pitch:s.pitch,cssClass:'hs',createTooltipFunc:d=>{d.dataset.spot=s.id;d.setAttribute('aria-label',s.title)}}}
 function redraw(){if(!viewer)return;
   // if the photo is still loading, redraw once it has loaded
   if(!viewer.isLoaded()){const v=viewer;if(!v.__waiting){v.__waiting=true;v.on('load',()=>{v.__waiting=false;if(v===viewer)redraw()})}return}
@@ -440,23 +506,60 @@ function loadScene(a){
   if(viewer){try{viewer.destroy()}catch(e){}viewer=null}
   viewer=pannellum.viewer('pano',{type:'equirectangular',panorama:a.image,autoLoad:true,showControls:false,hfov:50,minHfov:50,maxHfov:100,hotSpots:spots.map(cfg)});
 }
-function pick(a){
+// Show one place of the current adventure
+function setScene(i){
+  const a=scenesOf(trip)[i];sceneIdx=i;
   cur=a;spots=loadSpots(a);BUILT_SOUNDS=a.sounds||{};PICTURES=a.pictures||{};
-  loadScene(a); // starts loading the photo while the entry page is read
-  fetchSpots(a).then(h=>{if(h&&cur===a){spots=h;redraw()}if(cur===a)ensureVoiceovers(a,h||spots)});
-  $('menu').hidden=true;
-  if(editing){$('top').hidden=false;return}
-  $('entryTitle').textContent=a.title;$('entryTitle').hidden=!a.title;
-  $('entryText').textContent=a.text;$('entry').hidden=false;
+  loadScene(a);
+  fetchSpots(a).then(h=>{if(h&&cur===a){spots=h;redraw()}if(cur===a)ensureVoiceovers(a,voiceItems(a,h||spots))});
+  syncNav();
 }
+function pick(a){
+  trip=a;setScene(0); // starts loading the photo while the entry page is read
+  $('menu').hidden=true;
+  if(editing){$('top').hidden=false;syncNav();return}
+  $('entryTitle').textContent=a.title;$('entryTitle').hidden=!a.title;
+  $('entryText').textContent=a.text;$('entry').hidden=false;syncNav();
+}
+// The "1 of 3" label and the back / next buttons, for adventures with more than one place
+function syncNav(){const n=trip?scenesOf(trip).length:1,multi=n>1;
+  const showing=multi&&cur&&$('entry').hidden&&!$('top').hidden&&$('panel').hidden&&$('trans').hidden;
+  $('scPill').hidden=!multi;$('scPill').textContent=multi?(sceneIdx+1)+' of '+n:'';
+  $('scnav').hidden=!showing;
+  $('editNextBtn').hidden=!(editing&&multi&&cur&&cur.next);
+  if(!multi)return;
+  const hasPrev=sceneIdx>0,hasNext=sceneIdx<n-1;
+  // with only one button, a gap keeps back on the left and next on the right
+  $('navPrev').hidden=!hasPrev;$('navNext').hidden=!hasNext;$('navGap').hidden=hasPrev===hasNext;
+  if(hasPrev)$('navPrev').textContent='‹ '+placeName(sceneIdx-1);
+  if(hasNext)$('navNext').textContent=placeName(sceneIdx+1)+' ›';
+}
+function goPrev(){if(!trip||sceneIdx<=0)return;closePanel();setScene(sceneIdx-1)}
+// Moving on shows the screen between places first (if there is one), then the next place
+function goNext(){if(!trip||sceneIdx>=scenesOf(trip).length-1)return;closePanel();
+  const n=nextOf(cur);if(!n){setScene(sceneIdx+1);return}showTrans(n)}
+async function showTrans(n){stop();
+  const nx=scenesOf(trip)[sceneIdx+1];
+  $('transBg').style.backgroundImage='url("'+nx.image+'")';
+  $('transIco').textContent=n.icon||'';$('transIco').hidden=!n.icon;
+  $('transTitle').textContent=n.title||'';$('transText').textContent=n.text||'';
+  $('transGo').textContent='Go to '+(nx.name||'').toLowerCase()+' ›';
+  $('top').hidden=true;$('trans').hidden=false;syncNav();
+  const u=await voiceUrl('next');transPlayer.load(u);$('transPlayer').hidden=!u;$('transNoVoice').hidden=!!u;
+  $('transGo').focus({preventScroll:true});
+}
+function hideTrans(){transPlayer.stop();$('trans').hidden=true;$('top').hidden=false}
+$('transGo').onclick=()=>{hideTrans();setScene(sceneIdx+1)};
+$('transBack').onclick=()=>{hideTrans();syncNav()};
+$('navPrev').onclick=goPrev;$('navNext').onclick=goNext;
 function showMenu(){
-  closePanel();$('top').hidden=true;$('entry').hidden=true;$('menu').hidden=false;
+  closePanel();if(!$('trans').hidden)hideTrans();$('top').hidden=true;$('entry').hidden=true;$('menu').hidden=false;
   if(viewer){try{viewer.destroy()}catch(e){}viewer=null}
-  cur=null;
+  cur=null;trip=null;sceneIdx=0;syncNav();
 }
 $('advs').innerHTML=ADVENTURES.map((a,i)=>'<button type="button" class="primary" id="adv'+i+'">'+esc(a.label)+'</button>').join('');
 ADVENTURES.forEach((a,i)=>{$('adv'+i).onclick=()=>pick(a)});
-$('enterBtn').onclick=()=>{$('entry').hidden=true;$('top').hidden=false};
+$('enterBtn').onclick=()=>{$('entry').hidden=true;$('top').hidden=false;syncNav()};
 $('picClose').onclick=()=>{$('picview').hidden=true};
 $('entryBack').onclick=showMenu;$('sceneBack').onclick=showMenu;
 
@@ -467,16 +570,29 @@ $('shareBtn').onclick=()=>{
   const fallback=()=>{const b=show('Press and hold the text below, choose Select all, then Copy, and paste it into the chat with Claude.');b.focus();b.select()};
   try{navigator.clipboard.writeText(txt).then(()=>show('Copied. Paste it into the chat with Claude.'),fallback)}catch(e){fallback()}};
 $('grownBtn').onclick=()=>openParent();
+$('editNextBtn').onclick=()=>{if(!cur||!cur.next)return;const n=nextOf(cur),a=cur;
+  $('panel').innerHTML='<h2>Screen after '+esc((cur.name||'').toLowerCase())+'</h2>'+
+    '<label for="nTitle">Title<input type="text" id="nTitle" value="'+esc(n.title||'')+'"></label>'+
+    '<label for="nText">What it says<textarea id="nText">'+esc(n.text||'')+'</textarea></label>'+
+    '<div class="bar"><button type="button" class="primary" id="nSave">Save</button><button type="button" class="danger" id="nCancel">Cancel</button></div><span class="state" id="nMsg"></span>';
+  $('panel').hidden=false;syncNav();$('nCancel').onclick=closePanel;
+  $('nSave').onclick=async()=>{const v={title:$('nTitle').value.trim(),text:$('nText').value.trim()};if(!v.title){$('nTitle').focus();return}
+    $('nMsg').textContent='Saving…';$('nSave').disabled=true;
+    try{await fs.collection('adventures').doc(a.id).set({next:v},{merge:true});a.nextSaved=v;closePanel()}
+    catch(e){$('nMsg').textContent='Couldn’t save. Check you’re signed in as an admin, then try again.';$('nSave').disabled=false}}};
 
 // tap detection (works for touch and mouse; ignores drags)
 let down=null;const el=$('pano');
 el.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY}},true);
 el.addEventListener('pointerup',e=>{if(!down||!viewer)return;const m=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(m>10)return;
   const hit=e.target.closest&&e.target.closest('[data-spot]');
-  if(hit){const s=spots.find(x=>x.id===hit.dataset.spot);if(s)(editing?editSpot(s):showSpot(s));return}
+  if(hit){const s=spots.find(x=>x.id===hit.dataset.spot);if(!s)return;
+    if(editing){editSpot(s);return}
+    if(s.go){s.go==='next'?goNext():goPrev();return}
+    showSpot(s);return}
   if(editing){const [p,y]=viewer.mouseEventToCoords({clientX:e.clientX,clientY:e.clientY});editSpot(null,{pitch:+p.toFixed(1),yaw:+y.toFixed(1)})}},true);
 
-function closePanel(){if(rec){try{rec.r.stop()}catch(e){}}stop();obPlayers.forEach(x=>x.stop());Object.keys(takes).forEach(k=>{URL.revokeObjectURL(takes[k].url);delete takes[k]});$('panel').hidden=true;$('panel').classList.remove('list');$('panel').innerHTML='';if(cur&&$('entry').hidden)$('top').hidden=false}
+function closePanel(){if(rec){try{rec.r.stop()}catch(e){}}stop();obPlayers.forEach(x=>x.stop());Object.keys(takes).forEach(k=>{URL.revokeObjectURL(takes[k].url);delete takes[k]});$('panel').hidden=true;$('panel').classList.remove('list');$('panel').innerHTML='';if(cur&&$('entry').hidden&&$('trans').hidden)$('top').hidden=false;syncNav()}
 
 // In-app recording (needs microphone access; the Claude app blocks it, a normal website allows it)
 let rec=null;const takes={}; // unsaved new recordings, by row
@@ -526,14 +642,15 @@ const playerHtml=(id,x)=>'<div class="bar" style="flex-wrap:nowrap"><div class="
 async function openParent(){
   stop();const p=$('panel');p.classList.add('list');$('top').hidden=true;
   if(!voiceState.loaded)await loadVoiceState();
-  const name=(typeof WAIT_NAMES!=='undefined'&&cur&&WAIT_NAMES[cur.id])||(cur&&cur.label)||'';
+  const name=(typeof WAIT_NAMES!=='undefined'&&cur&&WAIT_NAMES[cur.id])||(cur&&cur.name&&trip?trip.label.replace(/^Max goes to /,'')+': '+cur.name.toLowerCase():'')||(cur&&cur.label)||'';
+  const nx=nextOf(cur),rows=spots.filter(x=>!x.go).concat(nx&&nx.text?[{id:'next',title:'Next screen: '+(nx.title||''),text:nx.text}]:[]);
   p.innerHTML='<div class="bar"><h2 style="flex:1">Grown-ups</h2><button type="button" id="parentSignOut">Sign out</button><button type="button" class="danger" id="parentDone">Close</button></div>'+
     '<div class="vcard" id="vcard"></div>'+
     '<h3 style="margin:6px 0 0;font-family:var(--display);font-weight:600;font-size:1.2rem">'+esc(name.replace(/^the /,'The '))+'</h3>'+
-    (spots.length?'':'<p style="font-size:1rem">There are no places in this adventure yet.</p>')+
-    spots.map((s,i)=>'<div class="vrow" id="row'+i+'"><div class="vhead"><h3>'+esc(s.title)+'</h3><span class="badge" id="pb'+i+'"></span></div><div id="pbody'+i+'" style="display:flex;flex-direction:column;gap:10px"></div><span class="state" id="ps'+i+'"></span></div>').join('');
-  p.hidden=false;renderVoiceCard();$('parentDone').onclick=closePanel;$('parentSignOut').onclick=()=>{closePanel();signOut()};
-  spots.forEach((s,i)=>parentRow(s,i));
+    (rows.length?'':'<p style="font-size:1rem">There are no places in this adventure yet.</p>')+
+    rows.map((s,i)=>'<div class="vrow" id="row'+i+'"><div class="vhead"><h3>'+esc(s.title)+'</h3><span class="badge" id="pb'+i+'"></span></div><div id="pbody'+i+'" style="display:flex;flex-direction:column;gap:10px"></div><span class="state" id="ps'+i+'"></span></div>').join('');
+  p.hidden=false;syncNav();renderVoiceCard();$('parentDone').onclick=closePanel;$('parentSignOut').onclick=()=>{closePanel();signOut()};
+  rows.forEach((s,i)=>parentRow(s,i));
 }
 function parentRow(s,i){
   const R={mode:'view',own:null,local:false,auto:null,take:null};
@@ -605,7 +722,7 @@ async function showSpot(s){
     '<div class="player"><button type="button" class="pp" id="cPP" aria-label="Pause">'+PAUSE_SVG+'</button><div class="pbar"><i id="cBar"></i></div><span class="ptime" id="cTime"></span></div></div>'+
     (hasVoice?'':'<span class="state">No parent recording yet.</span>')+
     '<div class="bar"><button type="button" class="danger" id="pClose">Close</button></div>';
-  $('panel').hidden=false;
+  $('panel').hidden=false;syncNav();
   const slot=label=>{$('cLabel').textContent='Playing: '+label;$('cBar').style.width='0';$('cTime').textContent='';$('cslot').classList.add('on');$('cslot').removeAttribute('aria-hidden')};
   $('pVoice').onclick=()=>{slot('Parent reads it');play('voice:'+s.id)};if(hasSound)$('pSound').onclick=()=>{slot('Hear the sound');play('sound:'+s.id)};
   $('cPP').onclick=togglePlay;
@@ -617,15 +734,22 @@ function editSpot(s,pos){
   const isNew=!s;s=s||{id:'s'+Date.now().toString(36),title:'',text:'',yaw:pos.yaw,pitch:pos.pitch};
   const d=JSON.parse(JSON.stringify(s)); // a working copy; only kept if Save works
   let busy=0;
+  const multi=trip&&scenesOf(trip).length>1;
   $('panel').innerHTML='<h2>'+(isNew?'New hotspot':'Change hotspot')+'</h2>'+
+    (multi?'<label for="fType">Type<select id="fType" style="font:inherit;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--soft-bg);color:var(--fg)"><option value="">White ring (information)</option>'+
+      (sceneIdx<scenesOf(trip).length-1?'<option value="next">Green arrow to '+esc(placeName(sceneIdx+1).toLowerCase())+'</option>':'')+
+      (sceneIdx>0?'<option value="prev">Green arrow back to '+esc(placeName(sceneIdx-1).toLowerCase())+'</option>':'')+'</select></label>':'')+
+    '<div id="fRing" style="display:flex;flex-direction:column;gap:10px">'+
     '<label for="fTitle">Name<input type="text" id="fTitle" value="'+esc(d.title)+'"></label>'+
     '<label for="fText">What it says<textarea id="fText">'+esc(d.text)+'</textarea></label>'+
     '<div class="bar"><label class="filebtn" for="fSoundIn">Add a sound<input class="vh" type="file" id="fSoundIn" accept="audio/*"></label><button type="button" class="remove" id="fSoundX">Remove</button><span class="state" id="sSound"></span></div>'+
     '<div class="bar"><label class="filebtn" for="fPicIn">Add a picture<input class="vh" type="file" id="fPicIn" accept="image/*"></label><button type="button" class="remove" id="fPicX">Remove</button><span class="state" id="sPic"></span></div>'+
-    '<label for="fPicLabel">Picture button name<input type="text" id="fPicLabel" value="'+esc(d.picLabel||(PICTURES[d.id]&&PICTURES[d.id].label)||'')+'" placeholder="See the picture"></label>'+
+    '<label for="fPicLabel">Picture button name<input type="text" id="fPicLabel" value="'+esc(d.picLabel||(PICTURES[d.id]&&PICTURES[d.id].label)||'')+'" placeholder="See the picture"></label></div>'+
     '<div class="bar"><button type="button" class="primary" id="fSave">Save</button>'+(isNew?'':'<button type="button" class="remove" id="fDel">Delete</button>')+'<button type="button" class="danger" id="fCancel">Cancel</button></div>'+
     '<span class="state" id="fMsg"></span>';
-  $('panel').hidden=false;
+  $('panel').hidden=false;syncNav();
+  const ftype=()=>$('fType')?$('fType').value:'';
+  if($('fType')){$('fType').value=d.go||'';const sync=()=>{$('fRing').hidden=!!ftype()};$('fType').onchange=sync;sync()}
   const refresh=()=>{$('sSound').textContent=d.soundUrl?'Added':(BUILT_SOUNDS[d.id]?'Built-in sound':'None yet');
     $('sPic').textContent=d.picUrl?'Added':(PICTURES[d.id]?'Built-in picture':'None yet');$('fSave').disabled=busy>0};refresh();
   const addFile=(input,kind,label)=>$(input).addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;
@@ -639,11 +763,15 @@ function editSpot(s,pos){
   $('fCancel').onclick=closePanel;
   const commit=async next=>{const before=spots;spots=next;$('fMsg').textContent='Saving…';$('fSave').disabled=true;
     if(await save()){redraw();closePanel()}else{spots=before;$('fMsg').textContent='Couldn’t save. Check you’re signed in as an admin, then try again.';refresh()}};
-  $('fSave').onclick=()=>{const t=$('fTitle').value.trim();if(!t){$('fTitle').focus();return}
+  $('fSave').onclick=()=>{
+    if(ftype()){d.go=ftype();d.title='';d.text='';delete d.soundUrl;delete d.soundPath;delete d.picUrl;delete d.picPath;delete d.picLabel;
+      commit(isNew?spots.concat([d]):spots.map(x=>x.id===d.id?d:x));return}
+    delete d.go;
+    const t=$('fTitle').value.trim();if(!t){$('fTitle').focus();return}
     d.title=t;d.text=$('fText').value.trim();const pl=$('fPicLabel').value.trim();if(pl)d.picLabel=pl;else delete d.picLabel;
     commit(isNew?spots.concat([d]):spots.map(x=>x.id===d.id?d:x))};
   if(!isNew)$('fDel').onclick=()=>commit(spots.filter(x=>x.id!==d.id));
-  $('fTitle').focus({preventScroll:true});
+  if(!ftype())$('fTitle').focus({preventScroll:true});
 }
 // ---- Voice setup: welcome, script, recorder, consent, create ----
 const SCRIPT=`Hello! Today we’re going on an adventure with Max.
@@ -698,6 +826,7 @@ function makePlayer(el){
   api.el=el;for(let k=obPlayers.length-1;k>=0;k--)if(obPlayers[k].el&&!document.body.contains(obPlayers[k].el))obPlayers.splice(k,1);
   obPlayers.push(api);return api}
 const reviewPlayer=makePlayer($('obPlayer')),samplePlayer=makePlayer($('obSample'));
+const transPlayer=makePlayer($('transPlayer'));
 
 let obFrom='first';
 function obShow(n){for(let k=1;k<=6;k++)$('ob'+k).hidden=k!==n;$('ob').scrollTop=0}
@@ -763,7 +892,7 @@ $('obUse').onclick=()=>{reviewPlayer.stop();$('obAgree').checked=false;$('obCrea
 
 // Create the voice, then voiceovers for every place, with a waiting screen that shows progress
 // Steps: 0 upload, 1 create voice, 2 read the places (one part per adventure), 3 sample. Rough expected seconds per part.
-const WAIT_NAMES={costco:'Costco',tube:'the Tube'};
+const WAIT_NAMES={costco:'Costco',tube:'the Tube',airport:'the airport'};
 const wait={parts:[],i:0,t0:0,partT0:0,timer:0,raf:0,voiceMade:false,busy:false};
 function waitParts(){return [{label:'Uploading your recording',dot:0,secs:4},{label:'Creating your voice',dot:1,secs:15}]
   .concat(ADVENTURES.map(a=>({label:'Reading the places ('+(WAIT_NAMES[a.id]||a.label)+')',dot:2,secs:15})))
@@ -809,7 +938,8 @@ async function runSetup(){
       wait.voiceMade=true;voiceState.exists=true;voiceState.loaded=true;forgetAuto();
     }
     // any voiceover that fails here is made later, the next time that place is opened
-    for(let k=0;k<ADVENTURES.length;k++){const a=ADVENTURES[k];waitStep(2+k);const list=(await fetchSpots(a))||a.builtIn;await ensureVoiceovers(a,list)}
+    for(let k=0;k<ADVENTURES.length;k++){waitStep(2+k);
+      for(const a of scenesOf(ADVENTURES[k])){const list=(await fetchSpots(a))||a.builtIn;await ensureVoiceovers(a,voiceItems(a,list))}}
     waitStep(2+ADVENTURES.length);
     forgetAuto();delete urlCache['families/'+uid()+'/auto/sample.mp3'];
     try{samplePlayer.load(await cloudUrl('families/'+uid()+'/auto/sample.mp3'))}catch(e){}

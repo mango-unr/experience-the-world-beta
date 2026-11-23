@@ -272,7 +272,8 @@ button.back svg{width:26px;height:26px}
     <button type="button" id="grownBtn">Grown-ups</button>
     <button type="button" id="shareBtn" hidden>Share hotspots with Claude</button>
     <button type="button" id="adminSignOut" hidden>Sign out</button>
-    <button type="button" id="editNextBtn" hidden>Edit next screen</button>
+    <button type="button" id="placeBtn" hidden>About this place</button>
+    <button type="button" id="editNextBtn" hidden>Screens after this place</button>
     <span class="scpill" id="scPill" hidden></span>
   </div>
   <div class="note" id="note">Tap a white ring to find out about it.</div>
@@ -338,7 +339,8 @@ const ADVENTURES=[
   pictures:{"smwb2dkiz":{src:"../pictures/tube-map.png",label:"See the map",alt:"A simple train map with seven stops, from King's Cross St Pancras to Green Park"},
             "smwb2jk0b":{src:"../pictures/tube-advert.png",label:"See the advert",alt:"An advert for Sunny Orange Juice with big oranges"}}},
  // An adventure with several places. Each place keeps its own hotspots (saved under its own id).
- // next = the screen shown when moving on from that place (admins can change its words).
+ // screens = the screens shown, in order, when moving on from that place. Admins can add, change, reorder and delete them,
+ // rename a place, and change the words on its arrows and buttons (saved in adventures/<place id>: screens, place).
  // Hotspots with go:'next' or go:'prev' are the green arrows that move between places.
  {id:'airport',label:'Max goes to the airport',
   title:'Come to the airport with Max',
@@ -346,11 +348,12 @@ const ADVENTURES=[
   scenes:[
    {id:'airport-checkin',name:'Check-in',image:'../heathrow-checkin.jpg',
     builtIn:[{"id":"go-next","go":"next","title":"","text":"","yaw":0,"pitch":-8}],
-    next:{icon:'🛂',title:'Security',text:'Next, we go through security. Max puts his bag and coat in a tray, and a grown-up checks them. Then we walk through a special doorway.'}},
+    screens:[{id:'next',icon:'🛂',title:'Security',text:'Next, we go through security. Max puts his bag and coat in a tray, and a grown-up checks them. Then we walk through a special doorway.'}]},
    {id:'airport-departures',name:'Departures',image:'../heathrow-departures.jpg',
     builtIn:[{"id":"go-next","go":"next","title":"","text":"","yaw":-68,"pitch":-3},{"id":"go-prev","go":"prev","title":"","text":"","yaw":126,"pitch":-3}],
-    next:{icon:'✈️',title:'The plane',text:'When our gate number shows on the screen, we walk to the plane. Max finds his seat and puts on his seatbelt. The plane takes off, and soon we land in Munich.'}},
-   {id:'airport-baggage',name:'Baggage claim',image:'../munich-baggage.jpg',
+    screens:[{id:'next',icon:'🚶',title:'The plane',text:'When our gate number shows on the screen, we walk to the plane. Max finds his seat and puts on his seatbelt.'},
+             {id:'flight',icon:'✈️',title:'The flight',text:'The plane goes up into the sky. Max looks out of the window at the clouds. After a while, the plane comes down gently and lands in Munich.'}]},
+   {id:'airport-baggage',name:'Arrivals and baggage claim',image:'../munich-baggage.jpg',
     builtIn:[{"id":"go-prev","go":"prev","title":"","text":"","yaw":0,"pitch":-3}]}
   ]}
 ];
@@ -364,12 +367,16 @@ let fs=null,st=null;
 // Hotspots: everyone reads them from the shared database (adventures/<id>). If none are saved there yet, the built-in ones are used.
 function loadSpots(a){return JSON.parse(JSON.stringify(a.builtIn))}
 async function fetchSpots(a){if(!fs)return null;try{const d=await fs.collection('adventures').doc(a.id).get();
-  if(d.exists&&d.data().next&&a.next)a.nextSaved=d.data().next;
+  if(d.exists){const v=d.data();
+    if(Array.isArray(v.screens))a.screensSaved=v.screens;else if(v.next&&a.screens)a.screensSaved=a.screens.map((x,k)=>k?x:Object.assign({},x,v.next)); // words saved before screens became a list
+    if(v.place)a.placeSaved=v.place;}
   if(d.exists&&Array.isArray(d.data().hotspots))return d.data().hotspots}catch(e){}return null}
-// The words for the screen after a place: what an admin saved, or the built-in words
-const nextOf=a=>a&&a.next?Object.assign({},a.next,a.nextSaved||{}):null;
-// The voiceovers a place needs: its hotspots, plus the screen that follows it
-const voiceItems=(a,list)=>{const n=nextOf(a);return (list||[]).concat(n&&n.text?[{id:'next',text:n.text}]:[])};
+// The screens after a place: what an admin saved, or the built-in ones
+const screensOf=a=>a?(a.screensSaved||a.screens||[]):[];
+// A place's name and arrow words: what an admin saved, or the built-in name
+const placeOf=a=>Object.assign({name:a&&a.name||'',fwd:'',back:''},a&&a.placeSaved||{});
+// The voiceovers a place needs: its hotspots, plus the screens that follow it
+const voiceItems=(a,list)=>(list||[]).concat(screensOf(a).filter(x=>x.text).map(x=>({id:x.id,text:x.text})));
 // Only admins can save; the database's security rules enforce that, not just this page.
 async function save(){if(!fs||!cur)return false;
   const clean=spots.map(x=>JSON.parse(JSON.stringify({id:x.id,title:x.title,text:x.text,yaw:x.yaw,pitch:x.pitch,go:x.go,picLabel:x.picLabel,soundUrl:x.soundUrl,soundPath:x.soundPath,picUrl:x.picUrl,picPath:x.picPath})));
@@ -492,8 +499,11 @@ function markOnboarded(){if(fs&&uid())fs.collection('families').doc(uid()).set({
 let viewer=null;
 const ARROW_UP='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V5M5 12l7-7 7 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ARROW_DOWN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15M5 12l7 7 7-7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const placeName=i=>{const sc=trip?scenesOf(trip)[i]:null;return sc&&sc.name?sc.name:''};
-function goLabel(s){const i=sceneIdx+(s.go==='next'?1:-1),n=placeName(i).toLowerCase();return n?(s.go==='next'?'To ':'Back to ')+n:''}
+const placeName=i=>{const sc=trip?scenesOf(trip)[i]:null;return sc?placeOf(sc).name:''};
+// Words on this place's forward / back arrow and button: an admin's own words, or "To …" / "Back to …"
+function goText(dir){const pl=placeOf(cur),own=dir==='next'?pl.fwd:pl.back;if(own)return own;
+  const n=placeName(sceneIdx+(dir==='next'?1:-1)).toLowerCase();return n?(dir==='next'?'To ':'Back to ')+n:''}
+function goLabel(s){return goText(s.go)}
 function cfg(s){
   if(s.go)return{id:s.id,yaw:s.yaw,pitch:s.pitch,cssClass:'hsgo',createTooltipFunc:d=>{d.dataset.spot=s.id;const l=goLabel(s);
     d.innerHTML='<span class="c">'+(s.go==='next'?ARROW_UP:ARROW_DOWN)+'</span>'+(l?'<span class="l">'+esc(l)+'</span>':'');d.setAttribute('aria-label',l||'Move')}};
@@ -516,6 +526,8 @@ function setScene(i){
 }
 function pick(a){
   trip=a;setScene(0); // starts loading the photo while the entry page is read
+  // the other places' names and screens, so buttons and arrows use the admin's words
+  scenesOf(a).slice(1).forEach(sc=>fetchSpots(sc).then(()=>{if(trip===a){syncNav();redraw()}}));
   $('menu').hidden=true;
   if(editing){$('top').hidden=false;syncNav();return}
   $('entryTitle').textContent=a.title;$('entryTitle').hidden=!a.title;
@@ -526,31 +538,36 @@ function syncNav(){const n=trip?scenesOf(trip).length:1,multi=n>1;
   const showing=multi&&cur&&$('entry').hidden&&!$('top').hidden&&$('panel').hidden&&$('trans').hidden;
   $('scPill').hidden=!multi;$('scPill').textContent=multi?(sceneIdx+1)+' of '+n:'';
   $('scnav').hidden=!showing;
-  $('editNextBtn').hidden=!(editing&&multi&&cur&&cur.next);
+  $('editNextBtn').hidden=!(editing&&multi&&cur&&sceneIdx<n-1);$('placeBtn').hidden=!(editing&&multi&&cur);
   if(!multi)return;
   const hasPrev=sceneIdx>0,hasNext=sceneIdx<n-1;
   // with only one button, a gap keeps back on the left and next on the right
   $('navPrev').hidden=!hasPrev;$('navNext').hidden=!hasNext;$('navGap').hidden=hasPrev===hasNext;
-  if(hasPrev)$('navPrev').textContent='‹ '+placeName(sceneIdx-1);
-  if(hasNext)$('navNext').textContent=placeName(sceneIdx+1)+' ›';
+  const pl=placeOf(cur);
+  if(hasPrev)$('navPrev').textContent='‹ '+(pl.back||placeName(sceneIdx-1));
+  if(hasNext)$('navNext').textContent=(pl.fwd||placeName(sceneIdx+1))+' ›';
 }
 function goPrev(){if(!trip||sceneIdx<=0)return;closePanel();setScene(sceneIdx-1)}
 // Moving on shows the screen between places first (if there is one), then the next place
 function goNext(){if(!trip||sceneIdx>=scenesOf(trip).length-1)return;closePanel();
-  const n=nextOf(cur);if(!n){setScene(sceneIdx+1);return}showTrans(n)}
-async function showTrans(n){stop();
-  const nx=scenesOf(trip)[sceneIdx+1];
+  if(!screensOf(cur).length){setScene(sceneIdx+1);return}showTrans(0)}
+// Screen k of the screens after this place. "Go on" moves to the next screen; the last one goes to the next place.
+let transK=0;
+async function showTrans(k){stop();transPlayer.stop();transK=k;
+  const list=screensOf(cur),n=list[k],nx=scenesOf(trip)[sceneIdx+1],last=k>=list.length-1;
   $('transBg').style.backgroundImage='url("'+nx.image+'")';
   $('transIco').textContent=n.icon||'';$('transIco').hidden=!n.icon;
   $('transTitle').textContent=n.title||'';$('transText').textContent=n.text||'';
-  $('transGo').textContent='Go to '+(nx.name||'').toLowerCase()+' ›';
+  $('transGo').textContent=last?'Go to '+placeName(sceneIdx+1).toLowerCase()+' ›':'Go on ›';
   $('top').hidden=true;$('trans').hidden=false;syncNav();
-  const u=await voiceUrl('next');transPlayer.load(u);$('transPlayer').hidden=!u;$('transNoVoice').hidden=!!u;
+  $('transPlayer').hidden=true;$('transNoVoice').hidden=true;
+  const u=await voiceUrl(n.id);if(transK!==k)return;transPlayer.load(u);$('transPlayer').hidden=!u;$('transNoVoice').hidden=!!u;
   $('transGo').focus({preventScroll:true});
 }
 function hideTrans(){transPlayer.stop();$('trans').hidden=true;$('top').hidden=false}
-$('transGo').onclick=()=>{hideTrans();setScene(sceneIdx+1)};
-$('transBack').onclick=()=>{hideTrans();syncNav()};
+$('transGo').onclick=()=>{if(transK<screensOf(cur).length-1){showTrans(transK+1);return}hideTrans();setScene(sceneIdx+1)};
+// back: the screen before, or the place itself from the first screen
+$('transBack').onclick=()=>{if(transK>0){showTrans(transK-1);return}hideTrans();syncNav()};
 $('navPrev').onclick=goPrev;$('navNext').onclick=goNext;
 function showMenu(){
   closePanel();if(!$('trans').hidden)hideTrans();$('top').hidden=true;$('entry').hidden=true;$('menu').hidden=false;
@@ -570,16 +587,57 @@ $('shareBtn').onclick=()=>{
   const fallback=()=>{const b=show('Press and hold the text below, choose Select all, then Copy, and paste it into the chat with Claude.');b.focus();b.select()};
   try{navigator.clipboard.writeText(txt).then(()=>show('Copied. Paste it into the chat with Claude.'),fallback)}catch(e){fallback()}};
 $('grownBtn').onclick=()=>openParent();
-$('editNextBtn').onclick=()=>{if(!cur||!cur.next)return;const n=nextOf(cur),a=cur;
-  $('panel').innerHTML='<h2>Screen after '+esc((cur.name||'').toLowerCase())+'</h2>'+
-    '<label for="nTitle">Title<input type="text" id="nTitle" value="'+esc(n.title||'')+'"></label>'+
-    '<label for="nText">What it says<textarea id="nText">'+esc(n.text||'')+'</textarea></label>'+
-    '<div class="bar"><button type="button" class="primary" id="nSave">Save</button><button type="button" class="danger" id="nCancel">Cancel</button></div><span class="state" id="nMsg"></span>';
-  $('panel').hidden=false;syncNav();$('nCancel').onclick=closePanel;
-  $('nSave').onclick=async()=>{const v={title:$('nTitle').value.trim(),text:$('nText').value.trim()};if(!v.title){$('nTitle').focus();return}
-    $('nMsg').textContent='Saving…';$('nSave').disabled=true;
-    try{await fs.collection('adventures').doc(a.id).set({next:v},{merge:true});a.nextSaved=v;closePanel()}
-    catch(e){$('nMsg').textContent='Couldn’t save. Check you’re signed in as an admin, then try again.';$('nSave').disabled=false}}};
+// Admin: a place's name and arrow words
+$('placeBtn').onclick=()=>{if(!cur)return;const a=cur,pl=placeOf(a),n=scenesOf(trip).length;
+  const fwdDef=sceneIdx<n-1?'To '+placeName(sceneIdx+1).toLowerCase():'',backDef=sceneIdx>0?'Back to '+placeName(sceneIdx-1).toLowerCase():'';
+  $('panel').innerHTML='<h2>About this place</h2>'+
+    '<label for="plName">Place name<input type="text" id="plName" value="'+esc(pl.name)+'"></label>'+
+    (fwdDef?'<label for="plFwd">Arrow and button to go forward<input type="text" id="plFwd" value="'+esc(pl.fwd)+'" placeholder="'+esc(fwdDef)+'"></label>':'')+
+    (backDef?'<label for="plBack">Arrow and button to go back<input type="text" id="plBack" value="'+esc(pl.back)+'" placeholder="'+esc(backDef)+'"></label>':'')+
+    '<p class="hint" style="text-align:left">Leave the arrow boxes empty to use the words shown in grey.</p>'+
+    '<div class="bar"><button type="button" class="primary" id="plSave">Save</button><button type="button" class="danger" id="plCancel">Cancel</button></div><span class="state" id="plMsg"></span>';
+  $('panel').hidden=false;syncNav();$('plCancel').onclick=closePanel;
+  $('plSave').onclick=async()=>{const v={name:$('plName').value.trim(),fwd:$('plFwd')?$('plFwd').value.trim():'',back:$('plBack')?$('plBack').value.trim():''};
+    if(!v.name){$('plName').focus();return}
+    $('plMsg').textContent='Saving…';$('plSave').disabled=true;
+    try{await fs.collection('adventures').doc(a.id).set({place:v},{merge:true});a.placeSaved=v;closePanel();redraw()}
+    catch(e){$('plMsg').textContent='Couldn’t save. Check you’re signed in as an admin, then try again.';$('plSave').disabled=false}}};
+// Admin: the screens after a place, in order
+$('editNextBtn').onclick=()=>screensPanel();
+function screensPanel(msg){if(!cur)return;const a=cur,list=screensOf(a).map(x=>Object.assign({},x));
+  $('panel').classList.add('list');$('top').hidden=true;
+  $('panel').innerHTML='<h2>Screens after '+esc(placeOf(a).name.toLowerCase())+'</h2>'+
+    (list.length?'':'<p style="font-size:1rem">No screens yet. The child goes straight to '+esc(placeName(sceneIdx+1).toLowerCase())+'.</p>')+
+    list.map((x,i)=>'<div class="vrow"><div class="vhead"><h3>'+(i+1)+' · '+esc((x.icon?x.icon+' ':'')+(x.title||''))+'</h3><span class="bar">'+
+      '<button type="button" id="su'+i+'" aria-label="Move up"'+(i?'':' disabled')+'>↑</button><button type="button" id="sd'+i+'" aria-label="Move down"'+(i<list.length-1?'':' disabled')+'>↓</button></span></div>'+
+      '<p class="words">'+esc(x.text||'')+'</p><div class="bar"><button type="button" id="se'+i+'">Edit</button><button type="button" class="remove" id="sx'+i+'">Delete</button></div></div>').join('')+
+    '<div class="bar"><button type="button" id="sAdd">+ Add a screen</button></div>'+
+    '<div class="bar"><button type="button" class="danger" id="sClose">Close</button></div><span class="state" id="sMsg">'+esc(msg||'')+'</span>';
+  $('panel').hidden=false;syncNav();$('sClose').onclick=closePanel;
+  const store=async next=>{$('sMsg').textContent='Saving…';
+    try{await fs.collection('adventures').doc(a.id).set({screens:next},{merge:true});a.screensSaved=next;screensPanel('Saved')}
+    catch(e){$('sMsg').textContent='Couldn’t save. Check you’re signed in as an admin, then try again.'}};
+  list.forEach((x,i)=>{
+    $('su'+i).onclick=()=>{const n=list.slice();[n[i-1],n[i]]=[n[i],n[i-1]];store(n)};
+    $('sd'+i).onclick=()=>{const n=list.slice();[n[i+1],n[i]]=[n[i],n[i+1]];store(n)};
+    $('se'+i).onclick=()=>screenForm(list,i,store);
+    $('sx'+i).onclick=()=>{if(confirmRow(i))store(list.filter((_,k)=>k!==i))}});
+  $('sAdd').onclick=()=>screenForm(list,-1,store);
+  // delete asks once, in the row, before removing
+  function confirmRow(i){const b=$('sx'+i);if(b.dataset.sure)return true;b.dataset.sure='1';b.textContent='Tap again to delete';return false}
+}
+function screenForm(list,i,store){const x=i>=0?list[i]:{id:'s'+Date.now().toString(36),icon:'',title:'',text:''};
+  $('panel').innerHTML='<h2>'+(i>=0?'Change screen':'New screen')+'</h2>'+
+    '<label for="sIcon">Icon (one emoji, optional)<input type="text" id="sIcon" value="'+esc(x.icon||'')+'" maxlength="4"></label>'+
+    '<label for="sTitle">Title<input type="text" id="sTitle" value="'+esc(x.title||'')+'"></label>'+
+    '<label for="sText">What it says<textarea id="sText">'+esc(x.text||'')+'</textarea></label>'+
+    '<div class="bar"><button type="button" class="primary" id="sSave">Save</button><button type="button" class="danger" id="sCancel">Cancel</button></div><span class="state" id="sMsg"></span>';
+  $('sCancel').onclick=()=>screensPanel();
+  $('sSave').onclick=()=>{const v={id:x.id,icon:$('sIcon').value.trim(),title:$('sTitle').value.trim(),text:$('sText').value.trim()};
+    if(!v.title){$('sTitle').focus();return}
+    store(i>=0?list.map((y,k)=>k===i?v:y):list.concat([v]))};
+  $('sTitle').focus({preventScroll:true});
+}
 
 // tap detection (works for touch and mouse; ignores drags)
 let down=null;const el=$('pano');
@@ -643,7 +701,7 @@ async function openParent(){
   stop();const p=$('panel');p.classList.add('list');$('top').hidden=true;
   if(!voiceState.loaded)await loadVoiceState();
   const name=(typeof WAIT_NAMES!=='undefined'&&cur&&WAIT_NAMES[cur.id])||(cur&&cur.name&&trip?trip.label.replace(/^Max goes to /,'')+': '+cur.name.toLowerCase():'')||(cur&&cur.label)||'';
-  const nx=nextOf(cur),rows=spots.filter(x=>!x.go).concat(nx&&nx.text?[{id:'next',title:'Next screen: '+(nx.title||''),text:nx.text}]:[]);
+  const rows=spots.filter(x=>!x.go).concat(screensOf(cur).filter(x=>x.text).map(x=>({id:x.id,title:'Next screen: '+(x.title||''),text:x.text})));
   p.innerHTML='<div class="bar"><h2 style="flex:1">Grown-ups</h2><button type="button" id="parentSignOut">Sign out</button><button type="button" class="danger" id="parentDone">Close</button></div>'+
     '<div class="vcard" id="vcard"></div>'+
     '<h3 style="margin:6px 0 0;font-family:var(--display);font-weight:600;font-size:1.2rem">'+esc(name.replace(/^the /,'The '))+'</h3>'+

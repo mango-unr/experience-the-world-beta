@@ -128,6 +128,9 @@ button.back svg{width:26px;height:26px}
 .line{border-top:2px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:8px}
 .line h3{margin:0;font-family:var(--display);font-weight:600;font-size:1.2rem}
 .line p{font-size:1.05rem}
+.loaderr{position:fixed;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:min(88vw,380px);background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.loaderr p{margin:0;font-size:1.1rem}
+.pnlm-info-box{display:none!important}
 .scpill{margin-left:auto;background:rgba(0,0,0,.55);color:#fff;font-size:.85rem;border-radius:999px;padding:5px 11px;font-family:var(--body);white-space:nowrap}
 .hsgo{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
 .hsgo .c{width:60px;height:60px;border-radius:50%;background:var(--btn);border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;box-sizing:border-box}
@@ -279,6 +282,8 @@ button.back svg{width:26px;height:26px}
   <div class="note" id="note">Tap a white ring to find out about it.</div>
 </div>
 <div class="panel" id="panel" hidden></div>
+<!-- shown if a photo still won't download after trying again -->
+<div class="loaderr" id="loadErr" hidden><p>This photo is taking a while to load. Check your internet, then tap Try again.</p><button type="button" class="primary" id="loadRetry">Try again</button></div>
 <!-- Moving between photos in an adventure with more than one place (e.g. the airport) -->
 <div class="scnav" id="scnav" hidden><button type="button" class="prev" id="navPrev"></button><span class="spacer" id="navGap" hidden></span><button type="button" class="primary" id="navNext"></button></div>
 <!-- The screen between two places: what happens next, read by the parent -->
@@ -521,9 +526,15 @@ function redraw(){if(!viewer)return;
   // if the photo is still loading, redraw once it has loaded
   if(!viewer.isLoaded()){const v=viewer;if(!v.__waiting){v.__waiting=true;v.on('load',()=>{v.__waiting=false;if(v===viewer)redraw()})}return}
   (viewer.getConfig().hotSpots||[]).map(h=>h.id).forEach(id=>viewer.removeHotSpot(id));spots.forEach(s=>viewer.addHotSpot(cfg(s)))}
-function loadScene(a){
+// Load a place's photo. Big photos can fail to download on a weak connection, so try again a few times
+// before showing a friendly message with a Try again button.
+function loadScene(a,tries){tries=tries||0;$('loadErr').hidden=true;
   if(viewer){try{viewer.destroy()}catch(e){}viewer=null}
-  viewer=pannellum.viewer('pano',{type:'equirectangular',panorama:a.image,autoLoad:true,showControls:false,hfov:50,minHfov:50,maxHfov:100,hotSpots:spots.map(cfg)});
+  const v=pannellum.viewer('pano',{type:'equirectangular',panorama:a.image,autoLoad:true,showControls:false,hfov:50,minHfov:50,maxHfov:100,hotSpots:spots.map(cfg)});
+  viewer=v;
+  v.on('error',()=>{if(viewer!==v||cur!==a)return;
+    if(tries<2){setTimeout(()=>{if(viewer===v&&cur===a)loadScene(a,tries+1)},1500*(tries+1));return}
+    $('loadErr').hidden=false;$('loadRetry').onclick=()=>loadScene(a,0)});
 }
 // Show one place of the current adventure
 function setScene(i){
@@ -579,7 +590,7 @@ $('transGo').onclick=()=>{if(transK<screensOf(cur).length-1){showTrans(transK+1)
 $('transBack').onclick=()=>{if(transK>0){showTrans(transK-1);return}hideTrans();syncNav()};
 $('navPrev').onclick=goPrev;$('navNext').onclick=goNext;
 function showMenu(){
-  closePanel();if(!$('trans').hidden)hideTrans();$('top').hidden=true;$('entry').hidden=true;$('menu').hidden=false;
+  $('loadErr').hidden=true;closePanel();if(!$('trans').hidden)hideTrans();$('top').hidden=true;$('entry').hidden=true;$('menu').hidden=false;
   if(viewer){try{viewer.destroy()}catch(e){}viewer=null}
   cur=null;trip=null;sceneIdx=0;syncNav();
 }

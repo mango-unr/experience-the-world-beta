@@ -147,7 +147,8 @@ button.back svg{width:26px;height:26px}
 .trans .ico{width:96px;height:96px;border-radius:50%;background:var(--soft-bg);display:flex;align-items:center;justify-content:center;font-size:48px;line-height:1}
 .trans h2{margin:0;font-family:var(--display);font-weight:600;font-size:1.7rem}
 .trans p{margin:0;font-size:1.2rem;line-height:1.6}
-.trans .go{width:100%;justify-content:center;min-height:60px;font-size:1.2rem}
+.trans .tnav{display:flex;gap:10px;width:100%}.trans .tnav button{flex:1;justify-content:center;min-height:60px;font-size:1.15rem}
+.trans .tnav .prev{background:var(--surface);color:var(--fg);border-color:var(--line)}
 .trans .back{position:absolute;left:max(16px,env(safe-area-inset-left,0px));top:calc(16px + env(safe-area-inset-top,0px));z-index:1}
 .tag{font-family:var(--display);font-weight:600;background:#e9a23b;color:#3a2604;border-radius:10px;padding:6px 12px}
 </style>
@@ -290,14 +291,14 @@ button.back svg{width:26px;height:26px}
 <!-- The screen between two places: what happens next, read by the parent -->
 <div class="trans" id="trans" hidden>
   <div class="bg" id="transBg"></div>
-  <button type="button" class="back" id="transBack" aria-label="Back to this place"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7M8 12h13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <button type="button" class="back" id="transBack" aria-label="Back to adventures"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7M8 12h13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   <div class="card">
     <div class="ico" id="transIco" aria-hidden="true"></div>
     <h2 id="transTitle"></h2>
     <p id="transText"></p>
     <div class="player" id="transPlayer"><button type="button" class="pp" aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#fff"/></svg></button><div class="pbar"><i></i></div><span class="ptime">Parent reads it</span></div>
     <span class="state" id="transNoVoice" hidden>No parent recording yet.</span>
-    <button type="button" class="primary go" id="transGo"></button>
+    <div class="tnav"><button type="button" class="prev" id="transPrev">‹ Previous</button><button type="button" class="primary" id="transGo"></button></div>
   </div>
 </div>
 <div class="picview" id="picview" hidden><img id="picImg" alt=""><button type="button" class="danger" id="picClose">Close</button></div>
@@ -515,9 +516,8 @@ let viewer=null;
 const ARROW_UP='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V5M5 12l7-7 7 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ARROW_DOWN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15M5 12l7 7 7-7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const placeName=i=>{const sc=trip?scenesOf(trip)[i]:null;return sc?placeOf(sc).name:''};
-// Words on this place's forward / back arrow and button: an admin's own words, or "To …" / "Back to …"
-function goText(dir){const pl=placeOf(cur),own=dir==='next'?pl.fwd:pl.back;if(own)return own;
-  const n=placeName(sceneIdx+(dir==='next'?1:-1)).toLowerCase();return n?(dir==='next'?'To ':'Back to ')+n:''}
+// Moving between places always says Previous and Next, so it's the same everywhere
+function goText(dir){return dir==='next'?'Next':'Previous'}
 function goLabel(s){return goText(s.go)}
 function cfg(s){
   if(s.go)return{id:s.id,yaw:s.yaw,pitch:s.pitch,cssClass:'hsgo',createTooltipFunc:d=>{d.dataset.spot=s.id;const l=goLabel(s);
@@ -568,9 +568,8 @@ function syncNav(){const n=trip?scenesOf(trip).length:1,multi=n>1;
   const hasPrev=sceneIdx>0,hasNext=sceneIdx<n-1;
   // with only one button, a gap keeps back on the left and next on the right
   $('navPrev').hidden=!hasPrev;$('navNext').hidden=!hasNext;$('navGap').hidden=hasPrev===hasNext;
-  const pl=placeOf(cur);
-  if(hasPrev)$('navPrev').textContent='‹ '+(pl.back||placeName(sceneIdx-1));
-  if(hasNext)$('navNext').textContent=(pl.fwd||placeName(sceneIdx+1))+' ›';
+  if(hasPrev)$('navPrev').textContent='‹ Previous';
+  if(hasNext)$('navNext').textContent='Next ›';
 }
 function goPrev(){if(!trip||sceneIdx<=0)return;closePanel();setScene(sceneIdx-1)}
 // Moving on shows the screen between places first (if there is one), then the next place
@@ -583,8 +582,7 @@ async function showTrans(k){stop();transPlayer.stop();transK=k;
   $('transBg').style.backgroundImage='url("'+nx.image+'")';
   $('transIco').textContent=n.icon||'';$('transIco').hidden=!n.icon;
   $('transTitle').textContent=n.title||'';$('transText').textContent=n.text||'';
-  // an admin can write their own button words for each screen
-  $('transGo').textContent=(n.btn?n.btn:last?'Go to '+placeName(sceneIdx+1).toLowerCase():'Go on')+' ›';
+  $('transGo').textContent='Next ›';
   $('top').hidden=true;$('trans').hidden=false;syncNav();
   $('transPlayer').hidden=true;$('transNoVoice').hidden=true;
   const u=await voiceUrl(n.id);if(transK!==k)return;transPlayer.load(u);$('transPlayer').hidden=!u;$('transNoVoice').hidden=!!u;
@@ -592,8 +590,9 @@ async function showTrans(k){stop();transPlayer.stop();transK=k;
 }
 function hideTrans(){transPlayer.stop();$('trans').hidden=true;$('top').hidden=false}
 $('transGo').onclick=()=>{if(transK<screensOf(cur).length-1){showTrans(transK+1);return}hideTrans();setScene(sceneIdx+1)};
-// back: the screen before, or the place itself from the first screen
-$('transBack').onclick=()=>{if(transK>0){showTrans(transK-1);return}hideTrans();syncNav()};
+// Previous: the screen before, or back to the place from the first screen. The corner arrow leaves the adventure.
+$('transPrev').onclick=()=>{if(transK>0){showTrans(transK-1);return}hideTrans();syncNav()};
+$('transBack').onclick=()=>{hideTrans();showMenu()};
 $('navPrev').onclick=goPrev;$('navNext').onclick=goNext;
 function showMenu(){
   $('loadErr').hidden=true;closePanel();if(!$('trans').hidden)hideTrans();$('top').hidden=true;$('entry').hidden=true;$('menu').hidden=false;
@@ -628,15 +627,12 @@ $('entryEditBtn').onclick=()=>{if(!trip)return;const t=trip,e=entryOf(t);
     catch(err){$('eMsg').textContent='Couldn’t save. Check you’re signed in as an admin, then try again.';$('eSave').disabled=false}}};
 // Admin: a place's name and arrow words
 $('placeBtn').onclick=()=>{if(!cur)return;const a=cur,pl=placeOf(a),n=scenesOf(trip).length;
-  const fwdDef=sceneIdx<n-1?'To '+placeName(sceneIdx+1).toLowerCase():'',backDef=sceneIdx>0?'Back to '+placeName(sceneIdx-1).toLowerCase():'';
   $('panel').innerHTML='<h2>About this place</h2>'+
     '<label for="plName">Place name<input type="text" id="plName" value="'+esc(pl.name)+'"></label>'+
-    (fwdDef?'<label for="plFwd">Arrow and button to go forward<input type="text" id="plFwd" value="'+esc(pl.fwd)+'" placeholder="'+esc(fwdDef)+'"></label>':'')+
-    (backDef?'<label for="plBack">Arrow and button to go back<input type="text" id="plBack" value="'+esc(pl.back)+'" placeholder="'+esc(backDef)+'"></label>':'')+
-    '<p class="hint" style="text-align:left">Leave the arrow boxes empty to use the words shown in grey.</p>'+
+    '<p class="hint" style="text-align:left">Used in Grown-ups and admin. The buttons always say Previous and Next.</p>'+
     '<div class="bar"><button type="button" class="primary" id="plSave">Save</button><button type="button" class="danger" id="plCancel">Cancel</button></div><span class="state" id="plMsg"></span>';
   $('panel').hidden=false;syncNav();$('plCancel').onclick=closePanel;
-  $('plSave').onclick=async()=>{const v={name:$('plName').value.trim(),fwd:$('plFwd')?$('plFwd').value.trim():'',back:$('plBack')?$('plBack').value.trim():''};
+  $('plSave').onclick=async()=>{const v={name:$('plName').value.trim()};
     if(!v.name){$('plName').focus();return}
     $('plMsg').textContent='Saving…';$('plSave').disabled=true;
     try{await fs.collection('adventures').doc(a.id).set({place:v},{merge:true});a.placeSaved=v;closePanel();redraw()}
@@ -666,17 +662,14 @@ function screensPanel(msg){if(!cur)return;const a=cur,list=screensOf(a).map(x=>O
   function confirmRow(i){const b=$('sx'+i);if(b.dataset.sure)return true;b.dataset.sure='1';b.textContent='Tap again to delete';return false}
 }
 function screenForm(list,i,store){const x=i>=0?list[i]:{id:'s'+Date.now().toString(36),icon:'',title:'',text:''};
-  const lastOne=i<0||i===list.length-1,btnDefault=lastOne?'Go to '+placeName(sceneIdx+1).toLowerCase():'Go on';
   $('panel').innerHTML='<h2>'+(i>=0?'Change screen':'New screen')+'</h2>'+
     '<label for="sIcon">Icon (one emoji, optional)<input type="text" id="sIcon" value="'+esc(x.icon||'')+'" maxlength="4"></label>'+
     '<label for="sTitle">Title<input type="text" id="sTitle" value="'+esc(x.title||'')+'"></label>'+
     '<label for="sText">What it says<textarea id="sText">'+esc(x.text||'')+'</textarea></label>'+
-    '<label for="sBtn">Button to go on (optional)<input type="text" id="sBtn" value="'+esc(x.btn||'')+'" placeholder="'+esc(btnDefault)+'"></label>'+
-    '<p class="hint" style="text-align:left">Leave the button empty to use the words shown in grey.</p>'+
+
     '<div class="bar"><button type="button" class="primary" id="sSave">Save</button><button type="button" class="danger" id="sCancel">Cancel</button></div><span class="state" id="sMsg"></span>';
   $('sCancel').onclick=()=>screensPanel();
   $('sSave').onclick=()=>{const v={id:x.id,icon:$('sIcon').value.trim(),title:$('sTitle').value.trim(),text:$('sText').value.trim()};
-    const bt=$('sBtn').value.trim().replace(/\s*›$/,'');if(bt)v.btn=bt;
     if(!v.title){$('sTitle').focus();return}
     store(i>=0?list.map((y,k)=>k===i?v:y):list.concat([v]))};
   $('sTitle').focus({preventScroll:true});

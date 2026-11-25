@@ -275,6 +275,7 @@ button.back svg{width:26px;height:26px}
     <button type="button" id="grownBtn">Grown-ups</button>
     <button type="button" id="shareBtn" hidden>Share hotspots with Claude</button>
     <button type="button" id="adminSignOut" hidden>Sign out</button>
+    <button type="button" id="entryEditBtn" hidden>Start page</button>
     <button type="button" id="placeBtn" hidden>About this place</button>
     <button type="button" id="editNextBtn" hidden>Screens after this place</button>
     <span class="scpill" id="scPill" hidden></span>
@@ -359,7 +360,7 @@ const ADVENTURES=[
     screens:[{id:'next',icon:'🛂',title:'Security',text:'Next, we go through security. Max puts his bag and coat in a tray, and a grown-up checks them. Then we walk through a special doorway.'}]},
    {id:'airport-departures',name:'Departures',image:'../heathrow-departures.jpg',
     builtIn:[{"id":"go-next","go":"next","title":"","text":"","yaw":-68,"pitch":-3},{"id":"go-prev","go":"prev","title":"","text":"","yaw":126,"pitch":-3}],
-    sounds:{"smwtoz7k5":"../sounds/airport-announcement.mp3","smwtp1haz":"../sounds/airport-departure-lounge.mp3","smwtoubmm":"../sounds/airport-cafe.mp3"},
+    sounds:{"smwtoz7k5":"../sounds/airport-announcement.mp3","smwtp1haz":"../sounds/airport-departure-lounge.mp3","smwtoubmm":"../sounds/airport-cafe.mp3","smwtov7id":"../sounds/airport-chime.mp3","smww4k0x2":"../sounds/airport-plane.mp3"},
     pictures:{"smwtov7id":{src:"../pictures/gate-sign.png",label:"Boarding gate sign example",alt:"A gate screen: Gate B12, to Munich, Boarding now"},
               "smwtox28u":{src:"../pictures/duty-free.png",label:"Example duty free shop front",alt:"A drawing of a shop called Travel Treats with bags, bottles, headphones and a laptop in the windows"}},
     screens:[{id:'next',icon:'🚶',title:'The plane',text:'When our gate number shows on the screen, we walk to the plane. Max finds his seat and puts on his seatbelt.'},
@@ -544,21 +545,25 @@ function setScene(i){
   fetchSpots(a).then(h=>{if(h&&cur===a){spots=h;redraw()}if(cur===a)ensureVoiceovers(a,voiceItems(a,h||spots))});
   syncNav();
 }
+// The start page words: an admin's saved words (adventures/<adventure id>.entry), or the built-in ones
+const entryOf=a=>Object.assign({title:a.title||'',text:a.text||''},a.entrySaved||{});
+function showEntry(a){const e=entryOf(a);$('entryTitle').textContent=e.title;$('entryTitle').hidden=!e.title;$('entryText').textContent=e.text}
+function fetchEntry(a){if(!fs)return Promise.resolve();return fs.collection('adventures').doc(a.id).get().then(d=>{if(d.exists&&d.data().entry)a.entrySaved=d.data().entry}).catch(()=>{})}
 function pick(a){
   trip=a;setScene(0); // starts loading the photo while the entry page is read
+  if(a.scenes)fetchEntry(a).then(()=>{if(trip===a)showEntry(a)});
   // the other places' names and screens, so buttons and arrows use the admin's words
   scenesOf(a).slice(1).forEach(sc=>fetchSpots(sc).then(()=>{if(trip===a){syncNav();redraw()}}));
   $('menu').hidden=true;
   if(editing){$('top').hidden=false;syncNav();return}
-  $('entryTitle').textContent=a.title;$('entryTitle').hidden=!a.title;
-  $('entryText').textContent=a.text;$('entry').hidden=false;syncNav();
+  showEntry(a);$('entry').hidden=false;syncNav();
 }
 // The "1 of 3" label and the back / next buttons, for adventures with more than one place
 function syncNav(){const n=trip?scenesOf(trip).length:1,multi=n>1;
   const showing=multi&&cur&&$('entry').hidden&&!$('top').hidden&&$('panel').hidden&&$('trans').hidden;
   $('scPill').hidden=!multi;$('scPill').textContent=multi?(sceneIdx+1)+' of '+n:'';
   $('scnav').hidden=!showing;
-  $('editNextBtn').hidden=!(editing&&multi&&cur&&sceneIdx<n-1);$('placeBtn').hidden=!(editing&&multi&&cur);
+  $('editNextBtn').hidden=!(editing&&multi&&cur&&sceneIdx<n-1);$('placeBtn').hidden=!(editing&&multi&&cur);$('entryEditBtn').hidden=!(editing&&multi&&cur&&sceneIdx===0);
   if(!multi)return;
   const hasPrev=sceneIdx>0,hasNext=sceneIdx<n-1;
   // with only one button, a gap keeps back on the left and next on the right
@@ -578,7 +583,8 @@ async function showTrans(k){stop();transPlayer.stop();transK=k;
   $('transBg').style.backgroundImage='url("'+nx.image+'")';
   $('transIco').textContent=n.icon||'';$('transIco').hidden=!n.icon;
   $('transTitle').textContent=n.title||'';$('transText').textContent=n.text||'';
-  $('transGo').textContent=last?'Go to '+placeName(sceneIdx+1).toLowerCase()+' ›':'Go on ›';
+  // an admin can write their own button words for each screen
+  $('transGo').textContent=(n.btn?n.btn:last?'Go to '+placeName(sceneIdx+1).toLowerCase():'Go on')+' ›';
   $('top').hidden=true;$('trans').hidden=false;syncNav();
   $('transPlayer').hidden=true;$('transNoVoice').hidden=true;
   const u=await voiceUrl(n.id);if(transK!==k)return;transPlayer.load(u);$('transPlayer').hidden=!u;$('transNoVoice').hidden=!!u;
@@ -601,12 +607,25 @@ $('picClose').onclick=()=>{$('picview').hidden=true};
 $('entryBack').onclick=showMenu;$('sceneBack').onclick=showMenu;
 
 $('shareBtn').onclick=()=>{
-  const txt=JSON.stringify({adventure:cur.id,hotspots:spots.map(({id,title,text,yaw,pitch,picLabel})=>({id,title,text,yaw,pitch,picLabel}))},null,1);
+  const multi=trip&&trip.scenes;
+  const txt=JSON.stringify(Object.assign({adventure:cur.id},multi?{startPage:entryOf(trip),place:placeOf(cur),screensAfter:screensOf(cur)}:{},
+    {hotspots:spots.map(({id,title,text,yaw,pitch,picLabel,go,soundUrl})=>({id,title,text,yaw,pitch,picLabel,go,hasOwnSound:soundUrl?true:undefined}))}),null,1);
   const show=msg=>{$('panel').innerHTML='<h2>Share hotspots with Claude</h2><p>'+msg+'</p><textarea id="shareBox" readonly style="min-height:160px"></textarea><div class="bar"><button type="button" class="danger" id="shareClose">Close</button></div>';
     $('panel').hidden=false;$('shareBox').value=txt;$('shareClose').onclick=closePanel;return $('shareBox')};
   const fallback=()=>{const b=show('Press and hold the text below, choose Select all, then Copy, and paste it into the chat with Claude.');b.focus();b.select()};
   try{navigator.clipboard.writeText(txt).then(()=>show('Copied. Paste it into the chat with Claude.'),fallback)}catch(e){fallback()}};
 $('grownBtn').onclick=()=>openParent();
+// Admin: the start page words for an adventure with several places
+$('entryEditBtn').onclick=()=>{if(!trip)return;const t=trip,e=entryOf(t);
+  $('panel').innerHTML='<h2>Start page</h2><p class="hint" style="text-align:left">Shown before the first photo, with the Enter button.</p>'+
+    '<label for="eTitle">Title<input type="text" id="eTitle" value="'+esc(e.title)+'"></label>'+
+    '<label for="eText">What it says<textarea id="eText">'+esc(e.text)+'</textarea></label>'+
+    '<div class="bar"><button type="button" class="primary" id="eSave">Save</button><button type="button" class="danger" id="eCancel">Cancel</button></div><span class="state" id="eMsg"></span>';
+  $('panel').hidden=false;syncNav();$('eCancel').onclick=closePanel;
+  $('eSave').onclick=async()=>{const v={title:$('eTitle').value.trim(),text:$('eText').value.trim()};if(!v.text){$('eText').focus();return}
+    $('eMsg').textContent='Saving…';$('eSave').disabled=true;
+    try{await fs.collection('adventures').doc(t.id).set({entry:v},{merge:true});t.entrySaved=v;closePanel()}
+    catch(err){$('eMsg').textContent='Couldn’t save. Check you’re signed in as an admin, then try again.';$('eSave').disabled=false}}};
 // Admin: a place's name and arrow words
 $('placeBtn').onclick=()=>{if(!cur)return;const a=cur,pl=placeOf(a),n=scenesOf(trip).length;
   const fwdDef=sceneIdx<n-1?'To '+placeName(sceneIdx+1).toLowerCase():'',backDef=sceneIdx>0?'Back to '+placeName(sceneIdx-1).toLowerCase():'';
@@ -647,13 +666,17 @@ function screensPanel(msg){if(!cur)return;const a=cur,list=screensOf(a).map(x=>O
   function confirmRow(i){const b=$('sx'+i);if(b.dataset.sure)return true;b.dataset.sure='1';b.textContent='Tap again to delete';return false}
 }
 function screenForm(list,i,store){const x=i>=0?list[i]:{id:'s'+Date.now().toString(36),icon:'',title:'',text:''};
+  const lastOne=i<0||i===list.length-1,btnDefault=lastOne?'Go to '+placeName(sceneIdx+1).toLowerCase():'Go on';
   $('panel').innerHTML='<h2>'+(i>=0?'Change screen':'New screen')+'</h2>'+
     '<label for="sIcon">Icon (one emoji, optional)<input type="text" id="sIcon" value="'+esc(x.icon||'')+'" maxlength="4"></label>'+
     '<label for="sTitle">Title<input type="text" id="sTitle" value="'+esc(x.title||'')+'"></label>'+
     '<label for="sText">What it says<textarea id="sText">'+esc(x.text||'')+'</textarea></label>'+
+    '<label for="sBtn">Button to go on (optional)<input type="text" id="sBtn" value="'+esc(x.btn||'')+'" placeholder="'+esc(btnDefault)+'"></label>'+
+    '<p class="hint" style="text-align:left">Leave the button empty to use the words shown in grey.</p>'+
     '<div class="bar"><button type="button" class="primary" id="sSave">Save</button><button type="button" class="danger" id="sCancel">Cancel</button></div><span class="state" id="sMsg"></span>';
   $('sCancel').onclick=()=>screensPanel();
   $('sSave').onclick=()=>{const v={id:x.id,icon:$('sIcon').value.trim(),title:$('sTitle').value.trim(),text:$('sText').value.trim()};
+    const bt=$('sBtn').value.trim().replace(/\s*›$/,'');if(bt)v.btn=bt;
     if(!v.title){$('sTitle').focus();return}
     store(i>=0?list.map((y,k)=>k===i?v:y):list.concat([v]))};
   $('sTitle').focus({preventScroll:true});

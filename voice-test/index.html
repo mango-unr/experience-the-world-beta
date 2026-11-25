@@ -131,13 +131,13 @@ button.back svg{width:26px;height:26px}
 .loaderr{position:fixed;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:min(88vw,380px);background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3)}
 .loaderr p{margin:0;font-size:1.1rem}
 .pnlm-info-box{display:none!important}
-.top .scpill{margin-left:auto;background:rgba(0,0,0,.6);color:#fff;border:0;font-size:.9rem;font-weight:600;border-radius:999px;padding:8px 14px;min-height:44px;font-family:var(--body);white-space:nowrap;cursor:pointer}
-.skipbg{position:fixed;inset:0;z-index:6;background:rgba(0,0,0,.25)}
-.skip{position:fixed;z-index:7;right:max(12px,env(safe-area-inset-right,0px));top:calc(64px + env(safe-area-inset-top,0px));width:min(300px,calc(100vw - 24px));background:var(--surface);color:var(--fg);border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:6px}
-.skip .mh{font-size:.8rem;color:var(--muted,#5a706e);padding:8px 12px 4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-.skip button{display:flex;width:100%;align-items:center;gap:12px;padding:12px 10px;min-height:52px;border:0;border-radius:12px;background:none;color:inherit;font:600 1rem var(--body);text-align:left;cursor:pointer}
-.skip button .n{flex:none;width:30px;height:30px;border-radius:50%;background:#eef3f2;color:#1f3433;display:flex;align-items:center;justify-content:center;font-size:.85rem}
-.skip button.on{background:var(--btn);color:#fff}.skip button.on .n{background:#fff;color:var(--btn)}
+.top .scpill{margin-left:auto;background:rgba(0,0,0,.55);color:#fff;border:0;font-size:.85rem;border-radius:999px;padding:6px 11px;min-height:36px;font-family:var(--body);white-space:nowrap;cursor:pointer}
+.skipbg{position:fixed;inset:0;z-index:6;background:transparent}
+.skip{position:fixed;z-index:7;right:max(12px,env(safe-area-inset-right,0px));top:calc(56px + env(safe-area-inset-top,0px));width:max-content;max-width:calc(100vw - 24px);background:var(--surface);color:var(--fg);border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.3);padding:4px}
+.skip .mh{font-size:.7rem;color:var(--muted,#5a706e);padding:5px 9px 2px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.skip button{display:flex;width:100%;align-items:center;gap:8px;padding:6px 9px;min-height:38px;border:0;border-radius:8px;background:none;color:inherit;font:500 .85rem var(--body);text-align:left;cursor:pointer;white-space:nowrap}
+.skip button .n{flex:none;width:20px;height:20px;border-radius:50%;background:#eef3f2;color:#1f3433;display:flex;align-items:center;justify-content:center;font-size:.7rem}
+.skip button.on{background:#e3efed;font-weight:600}.skip button.on .n{background:var(--btn);color:#fff}
 .hsgo{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
 .hsgo .c{width:60px;height:60px;border-radius:50%;background:var(--btn);border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;box-sizing:border-box}
 .hsgo .c svg{width:30px;height:30px}
@@ -605,7 +605,7 @@ $('transBack').onclick=()=>{hideTrans();showMenu()};
 function openSkip(){if(!trip)return;const list=scenesOf(trip),box=$('skip');box.innerHTML='<div class="mh">Skip to a place</div>';
   list.forEach((sc,i)=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');if(i===sceneIdx)b.className='on';
     const nm=placeOf(sc).name||sc.name||('Place '+(i+1));
-    b.innerHTML='<span class="n">'+(i+1)+'</span><span></span>';b.lastChild.textContent=nm+(i===sceneIdx?' · you are here':'');
+    b.innerHTML='<span class="n">'+(i+1)+'</span><span></span>';b.lastChild.textContent=nm+(i===sceneIdx?' · here':'');
     b.onclick=()=>{closeSkip();if(i!==sceneIdx){closePanel();setScene(i)}};box.appendChild(b)});
   box.hidden=false;$('skipBg').hidden=false;$('scPill').setAttribute('aria-expanded','true');$('scPill').textContent=(sceneIdx+1)+' of '+list.length+' ▴'}
 function closeSkip(){if($('skip').hidden)return;$('skip').hidden=true;$('skipBg').hidden=true;$('scPill').setAttribute('aria-expanded','false');

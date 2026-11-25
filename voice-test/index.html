@@ -131,7 +131,13 @@ button.back svg{width:26px;height:26px}
 .loaderr{position:fixed;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:min(88vw,380px);background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3)}
 .loaderr p{margin:0;font-size:1.1rem}
 .pnlm-info-box{display:none!important}
-.scpill{margin-left:auto;background:rgba(0,0,0,.55);color:#fff;font-size:.85rem;border-radius:999px;padding:5px 11px;font-family:var(--body);white-space:nowrap}
+.top .scpill{margin-left:auto;background:rgba(0,0,0,.6);color:#fff;border:0;font-size:.9rem;font-weight:600;border-radius:999px;padding:8px 14px;min-height:44px;font-family:var(--body);white-space:nowrap;cursor:pointer}
+.skipbg{position:fixed;inset:0;z-index:6;background:rgba(0,0,0,.25)}
+.skip{position:fixed;z-index:7;right:max(12px,env(safe-area-inset-right,0px));top:calc(64px + env(safe-area-inset-top,0px));width:min(300px,calc(100vw - 24px));background:var(--surface);color:var(--fg);border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:6px}
+.skip .mh{font-size:.8rem;color:var(--muted,#5a706e);padding:8px 12px 4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.skip button{display:flex;width:100%;align-items:center;gap:12px;padding:12px 10px;min-height:52px;border:0;border-radius:12px;background:none;color:inherit;font:600 1rem var(--body);text-align:left;cursor:pointer}
+.skip button .n{flex:none;width:30px;height:30px;border-radius:50%;background:#eef3f2;color:#1f3433;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+.skip button.on{background:var(--btn);color:#fff}.skip button.on .n{background:#fff;color:var(--btn)}
 .hsgo{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
 .hsgo .c{width:60px;height:60px;border-radius:50%;background:var(--btn);border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;box-sizing:border-box}
 .hsgo .c svg{width:30px;height:30px}
@@ -279,13 +285,15 @@ button.back svg{width:26px;height:26px}
     <button type="button" id="entryEditBtn" hidden>Start page</button>
     <button type="button" id="placeBtn" hidden>About this place</button>
     <button type="button" id="editNextBtn" hidden>Screens after this place</button>
-    <span class="scpill" id="scPill" hidden></span>
+    <button type="button" class="scpill" id="scPill" aria-haspopup="true" aria-expanded="false" hidden></button>
   </div>
   <div class="note" id="note">Tap a white ring to find out about it.</div>
 </div>
 <div class="panel" id="panel" hidden></div>
 <!-- shown if a photo still won't download after trying again -->
 <div class="loaderr" id="loadErr" hidden><p>This photo is taking a while to load. Check your internet, then tap Try again.</p><button type="button" class="primary" id="loadRetry">Try again</button></div>
+<!-- "Skip to a place": tap "2 of 3" to jump straight to any photo, without the screens in between -->
+<div class="skipbg" id="skipBg" hidden></div><div class="skip" id="skip" role="menu" hidden></div>
 <!-- Moving between photos in an adventure with more than one place (e.g. the airport) -->
 <div class="scnav" id="scnav" hidden><button type="button" class="prev" id="navPrev"></button><span class="spacer" id="navGap" hidden></span><button type="button" class="primary" id="navNext"></button></div>
 <!-- The screen between two places: what happens next, read by the parent -->
@@ -561,7 +569,7 @@ function pick(a){
 // The "1 of 3" label and the back / next buttons, for adventures with more than one place
 function syncNav(){const n=trip?scenesOf(trip).length:1,multi=n>1;
   const showing=multi&&cur&&$('entry').hidden&&!$('top').hidden&&$('panel').hidden&&$('trans').hidden;
-  $('scPill').hidden=!multi;$('scPill').textContent=multi?(sceneIdx+1)+' of '+n:'';
+  if(!multi||$('top').hidden)closeSkip();$('scPill').hidden=!multi;$('scPill').textContent=multi?(sceneIdx+1)+' of '+n+($('skip').hidden?' ▾':' ▴'):'';
   $('scnav').hidden=!showing;
   $('editNextBtn').hidden=!(editing&&multi&&cur&&sceneIdx<n-1);$('placeBtn').hidden=!(editing&&multi&&cur);$('entryEditBtn').hidden=!(editing&&multi&&cur&&sceneIdx===0);
   if(!multi)return;
@@ -593,6 +601,17 @@ $('transGo').onclick=()=>{if(transK<screensOf(cur).length-1){showTrans(transK+1)
 // Previous: the screen before, or back to the place from the first screen. The corner arrow leaves the adventure.
 $('transPrev').onclick=()=>{if(transK>0){showTrans(transK-1);return}hideTrans();syncNav()};
 $('transBack').onclick=()=>{hideTrans();showMenu()};
+// "Skip to a place": every place in order, where you are highlighted. Goes straight to the photo, skipping the screens in between.
+function openSkip(){if(!trip)return;const list=scenesOf(trip),box=$('skip');box.innerHTML='<div class="mh">Skip to a place</div>';
+  list.forEach((sc,i)=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');if(i===sceneIdx)b.className='on';
+    const nm=placeOf(sc).name||sc.name||('Place '+(i+1));
+    b.innerHTML='<span class="n">'+(i+1)+'</span><span></span>';b.lastChild.textContent=nm+(i===sceneIdx?' · you are here':'');
+    b.onclick=()=>{closeSkip();if(i!==sceneIdx){closePanel();setScene(i)}};box.appendChild(b)});
+  box.hidden=false;$('skipBg').hidden=false;$('scPill').setAttribute('aria-expanded','true');$('scPill').textContent=(sceneIdx+1)+' of '+list.length+' ▴'}
+function closeSkip(){if($('skip').hidden)return;$('skip').hidden=true;$('skipBg').hidden=true;$('scPill').setAttribute('aria-expanded','false');
+  if(trip)$('scPill').textContent=(sceneIdx+1)+' of '+scenesOf(trip).length+' ▾'}
+$('scPill').onclick=()=>{$('skip').hidden?openSkip():closeSkip()};$('skipBg').onclick=closeSkip;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSkip()});
 $('navPrev').onclick=goPrev;$('navNext').onclick=goNext;
 function showMenu(){
   $('loadErr').hidden=true;closePanel();if(!$('trans').hidden)hideTrans();$('top').hidden=true;$('entry').hidden=true;$('menu').hidden=false;

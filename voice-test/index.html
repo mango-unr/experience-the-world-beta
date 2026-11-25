@@ -336,23 +336,29 @@ const ADVENTURES=[
   ],
   sounds:{"example":"../sounds/tills.mp3","smw3madit":"../sounds/crowds.mp3","smw3m9joi":"../sounds/menu.mp3"},
   pictures:{}},
- {id:'tube',label:'Max takes the underground train',image:'../tube.jpg',store:'tubeHotspots.v1',
+ // Max takes the train: the station platform, then on the train (the train keeps its old id 'tube' so its saved hotspots and voiceovers stay)
+ {id:'train',label:'Max takes the underground train',
   title:'',
-  text:'Max is going to central London today and is going to take the tube. Tap through to explore what the inside of a London underground train looks like.',
+  text:'Max is going to central London today and is going to take the train. Tap through to explore what the inside of a London underground train looks like.',
+  scenes:[
+   {id:'train-station',name:'Station platform',image:'../munich-station.jpg',
+    builtIn:[{"id":"go-next","go":"next","title":"","text":"","yaw":0,"pitch":-8}],sounds:{},pictures:{}},
+   {id:'tube',name:'On the train',image:'../tube.jpg',
   builtIn:[
+   {"id":"go-prev","go":"prev","title":"","text":"","yaw":0,"pitch":-8},
    {"id": "smwb17huz", "title": "Train doors", "text": "These are the train doors that open at each station where the train stops. Max likes to watch them open and close at each stop. He mimics them with his hands and goes \"boom\" when they close.", "yaw": 162.1, "pitch": -19.6},
    {"id": "smwb1mkol", "title": "Vents", "text": "These are air vents. They push fresh air into the train. They sometimes make a loud whoosh noise and a gust of wind comes in.", "yaw": 57.2, "pitch": 6.7},
    {"id": "smwb21gzh", "title": "People", "text": "There are lots of people on the London underground, especially during peak times when people may be getting to or from work.", "yaw": 32.5, "pitch": -25},
    {"id": "smwb22mqt", "title": "Train windows", "text": "Max enjoys looking out the train window because he can see the stations passing by really really really quickly.", "yaw": 77.8, "pitch": -28.9},
    {"id": "smwb2dkiz", "title": "Train map", "text": "This is the train map. It has the stops on this train ride.", "yaw": -39.1, "pitch": 18.5},
-   {"id": "smwb2jk0b", "title": "Adverts", "text": "The tube has lots of adverts from local businesses who want people to buy their products.", "yaw": -50.8, "pitch": -2.5},
+   {"id": "smwb2jk0b", "title": "Adverts", "text": "The train has lots of adverts from local businesses who want people to buy their products.", "yaw": -50.8, "pitch": -2.5},
    {"id": "smwb2k0cr", "title": "Lights", "text": "These are lights that keep it bright in the train when it goes underground.", "yaw": 35.2, "pitch": 25.7},
    {"id": "smwb2kfwb", "title": "Train", "text": "This is the train. It gets people from one place in the city to another. It sometimes gets loud as the train starts and speeds up. It can also get loud as it stops at a station. When the noise gets too loud Max can wear his headphones to help.", "yaw": 9.9, "pitch": 26.9}
   ],
   sounds:{"smwb17huz":"../sounds/tube-doors.mp3","smwb21gzh":"../sounds/tube-people.mp3","smwb2kfwb":"../sounds/tube-train.mp3","smwb22mqt":"../sounds/tube-windows.mp3"},
   // pictures: a hotspot's picture extra, shown full screen; label = its button
   pictures:{"smwb2dkiz":{src:"../pictures/tube-map.png",label:"See the map",alt:"A simple train map with seven stops, from King's Cross St Pancras to Green Park"},
-            "smwb2jk0b":{src:"../pictures/tube-advert.png",label:"See the advert",alt:"An advert for Sunny Orange Juice with big oranges"}}},
+            "smwb2jk0b":{src:"../pictures/tube-advert.png",label:"See the advert",alt:"An advert for Sunny Orange Juice with big oranges"}}}]},
  // An adventure with several places. Each place keeps its own hotspots (saved under its own id).
  // screens = the screens shown, in order, when moving on from that place. Admins can add, change, reorder and delete them,
  // rename a place, and change the words on its arrows and buttons (saved in adventures/<place id>: screens, place).
@@ -379,7 +385,15 @@ const ADVENTURES=[
     sounds:{"smwtpuiqm":"../sounds/airport-carousel.mp3","smwtq3tos":"../sounds/airport-vending.mp3","smwtq5v2t":"../sounds/airport-doors.mp3"},
     pictures:{"smwtq2jpb":{src:"../pictures/airport-tv.png",label:"Example airport TV screen",alt:"A screen saying Welcome to Munich, with arrows to the exit, taxis, trains and the information desk"},
               "smwtq704r":{src:"../pictures/airport-advert.png",label:"Example airport advert",alt:"A made-up advert for HelloHome SIM, phone data for your holiday"}}}
-  ]}
+  ]},
+ {id:'christmas-market',label:'Max goes to the Christmas market',image:'../christmas-market.jpg',store:'christmasHotspots.v1',
+  title:'',
+  text:'Max is going to a Christmas market today. Tap through to explore it with him.',
+  builtIn:[],sounds:{},pictures:{}},
+ {id:'park',label:'Max goes to the park',image:'../munich-park.jpg',store:'parkHotspots.v1',
+  title:'',
+  text:'Max is going to the park today. Tap through to explore it with him.',
+  builtIn:[],sounds:{},pictures:{}}
 ];
 // Every adventure is a list of places: most have one, the airport has three
 const scenesOf=t=>t.scenes||[t];
@@ -755,7 +769,7 @@ const playerHtml=(id,x)=>'<div class="bar" style="flex-wrap:nowrap"><div class="
 async function openParent(){
   stop();const p=$('panel');p.classList.add('list');$('top').hidden=true;
   if(!voiceState.loaded)await loadVoiceState();
-  const name=(typeof WAIT_NAMES!=='undefined'&&cur&&WAIT_NAMES[cur.id])||(cur&&cur.name&&trip?trip.label.replace(/^Max goes to /,'')+': '+cur.name.toLowerCase():'')||(cur&&cur.label)||'';
+  const name=(cur&&cur.name&&trip&&trip.scenes?(WAIT_NAMES[trip.id]||trip.label)+': '+cur.name.toLowerCase():'')||(cur&&WAIT_NAMES[cur.id])||(cur&&cur.label)||'';
   const rows=spots.filter(x=>!x.go).concat(screensOf(cur).filter(x=>x.text).map(x=>({id:x.id,title:'Next screen: '+(x.title||''),text:x.text})));
   p.innerHTML='<div class="bar"><h2 style="flex:1">Grown-ups</h2><button type="button" id="parentSignOut">Sign out</button><button type="button" class="danger" id="parentDone">Close</button></div>'+
     '<div class="vcard" id="vcard"></div>'+
@@ -1008,7 +1022,7 @@ $('obUse').onclick=()=>{reviewPlayer.stop();$('obAgree').checked=false;$('obCrea
 
 // Create the voice, then voiceovers for every place, with a waiting screen that shows progress
 // Steps: 0 upload, 1 create voice, 2 read the places (one part per adventure), 3 sample. Rough expected seconds per part.
-const WAIT_NAMES={costco:'Costco',tube:'the Tube',airport:'the airport'};
+const WAIT_NAMES={costco:'Costco',tube:'the train',train:'the train',airport:'the airport','christmas-market':'the Christmas market',park:'the park'};
 const wait={parts:[],i:0,t0:0,partT0:0,timer:0,raf:0,voiceMade:false,busy:false};
 function waitParts(){return [{label:'Uploading your recording',dot:0,secs:4},{label:'Creating your voice',dot:1,secs:15}]
   .concat(ADVENTURES.map(a=>({label:'Reading the places ('+(WAIT_NAMES[a.id]||a.label)+')',dot:2,secs:15})))

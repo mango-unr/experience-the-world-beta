@@ -793,7 +793,10 @@ async function showSpot(s){
   const slot=label=>{$('cLabel').textContent='Playing: '+label;$('cBar').style.width='0';$('cTime').textContent='';$('cslot').classList.add('on');$('cslot').removeAttribute('aria-hidden')};
   $('pVoice').onclick=()=>{slot('Parent reads it');play('voice:'+s.id)};if(hasSound)$('pSound').onclick=()=>{slot('Hear the sound');play('sound:'+s.id)};
   $('cPP').onclick=togglePlay;
-  if(pic)$('pPic').onclick=()=>{$('picImg').src=pic.src;$('picImg').alt=pic.alt||'';$('picview').hidden=false;$('picClose').focus()};$('pClose').onclick=closePanel;
+  // clear the last picture first, and only show the new one once it has loaded, so the old one never flashes up
+  if(pic)$('pPic').onclick=()=>{const im=$('picImg');im.style.visibility='hidden';im.removeAttribute('src');
+    im.onload=()=>{im.style.visibility='visible'};im.onerror=()=>{im.style.visibility='visible'};
+    im.alt=pic.alt||'';im.src=pic.src;$('picview').hidden=false;$('picClose').focus()};$('pClose').onclick=closePanel;
 }
 
 // Admin: edit a hotspot. Changes are saved to the shared database, so every family sees them.

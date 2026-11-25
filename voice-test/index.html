@@ -573,7 +573,7 @@ function showEntry(a){const e=entryOf(a);$('entryTitle').textContent=e.title;$('
 function fetchEntry(a){if(!fs)return Promise.resolve();return fs.collection('adventures').doc(a.id).get().then(d=>{if(d.exists&&d.data().entry)a.entrySaved=d.data().entry}).catch(()=>{})}
 function pick(a){
   trip=a;setScene(0); // starts loading the photo while the entry page is read
-  if(a.scenes)fetchEntry(a).then(()=>{if(trip===a)showEntry(a)});
+  fetchEntry(a).then(()=>{if(trip===a)showEntry(a)});
   // the other places' names and screens, so buttons and arrows use the admin's words
   scenesOf(a).slice(1).forEach(sc=>fetchSpots(sc).then(()=>{if(trip===a){syncNav();redraw()}}));
   $('menu').hidden=true;
@@ -585,7 +585,7 @@ function syncNav(){const n=trip?scenesOf(trip).length:1,multi=n>1;
   const showing=multi&&cur&&$('entry').hidden&&!$('top').hidden&&$('panel').hidden&&$('trans').hidden;
   if(!multi||$('top').hidden)closeSkip();$('scPill').hidden=!multi;$('scPill').textContent=multi?(sceneIdx+1)+' of '+n+($('skip').hidden?' ▾':' ▴'):'';
   $('scnav').hidden=!showing;
-  $('editNextBtn').hidden=!(editing&&multi&&cur&&sceneIdx<n-1);$('placeBtn').hidden=!(editing&&multi&&cur);$('entryEditBtn').hidden=!(editing&&multi&&cur&&sceneIdx===0);
+  $('editNextBtn').hidden=!(editing&&multi&&cur&&sceneIdx<n-1);$('placeBtn').hidden=!(editing&&multi&&cur);$('entryEditBtn').hidden=!(editing&&cur&&sceneIdx===0);
   if(!multi)return;
   const hasPrev=sceneIdx>0,hasNext=sceneIdx<n-1;
   // with only one button, a gap keeps back on the left and next on the right
@@ -640,7 +640,7 @@ $('entryBack').onclick=showMenu;$('sceneBack').onclick=showMenu;
 
 $('shareBtn').onclick=()=>{
   const multi=trip&&trip.scenes;
-  const txt=JSON.stringify(Object.assign({adventure:cur.id},multi?{startPage:entryOf(trip),place:placeOf(cur),screensAfter:screensOf(cur)}:{},
+  const txt=JSON.stringify(Object.assign({adventure:cur.id},multi?{startPage:entryOf(trip),place:placeOf(cur),screensAfter:screensOf(cur)}:{startPage:entryOf(trip)},
     {hotspots:spots.map(({id,title,text,yaw,pitch,picLabel,go,soundUrl})=>({id,title,text,yaw,pitch,picLabel,go,hasOwnSound:soundUrl?true:undefined}))}),null,1);
   const show=msg=>{$('panel').innerHTML='<h2>Share hotspots with Claude</h2><p>'+msg+'</p><textarea id="shareBox" readonly style="min-height:160px"></textarea><div class="bar"><button type="button" class="danger" id="shareClose">Close</button></div>';
     $('panel').hidden=false;$('shareBox').value=txt;$('shareClose').onclick=closePanel;return $('shareBox')};
